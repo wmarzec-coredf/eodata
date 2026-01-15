@@ -1,0 +1,185 @@
+import { Suspense, useState, useEffect } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Stars, Html } from "@react-three/drei";
+import Earth from "./Earth";
+import Satellite from "./Satellite";
+import GroundStation from "./GroundStation";
+import * as THREE from "three";
+
+interface OrbitConfig {
+  name: string;
+  color: string;
+  radius: number;
+  satellites: number;
+  speed: number;
+  tilt: number;
+}
+
+const orbitConfigs: OrbitConfig[] = [
+  { name: "LEO", color: "#22c55e", radius: 2.8, satellites: 8, speed: 0.8, tilt: 0.4 },
+  { name: "MEO", color: "#eab308", radius: 4, satellites: 4, speed: 0.4, tilt: 0.2 },
+  { name: "GEO", color: "#ef4444", radius: 5.5, satellites: 3, speed: 0.1, tilt: 0 },
+];
+
+const groundStations = [
+  { name: "Darmstadt (ESOC)", lat: 49.87, lng: 8.63 },
+  { name: "Kourou", lat: 5.16, lng: -52.65 },
+  { name: "Perth", lat: -31.95, lng: 115.86 },
+  { name: "Kiruna", lat: 67.86, lng: 20.22 },
+  { name: "Maspalomas", lat: 27.76, lng: -15.58 },
+  { name: "Redu", lat: 50.0, lng: 5.15 },
+];
+
+const LoadingFallback = () => (
+  <Html center>
+    <div className="text-primary animate-pulse">Loading 3D Scene...</div>
+  </Html>
+);
+
+interface SceneProps {
+  showLEO: boolean;
+  showMEO: boolean;
+  showGEO: boolean;
+  showGroundStations: boolean;
+  showDataTransfer: boolean;
+}
+
+const SceneContent = ({
+  showLEO,
+  showMEO,
+  showGEO,
+  showGroundStations,
+}: SceneProps) => {
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime((t) => t + 0.016);
+    }, 16);
+    return () => clearInterval(interval);
+  }, []);
+
+  const visibleOrbits = orbitConfigs.filter((orbit) => {
+    if (orbit.name === "LEO") return showLEO;
+    if (orbit.name === "MEO") return showMEO;
+    if (orbit.name === "GEO") return showGEO;
+    return true;
+  });
+
+  return (
+    <>
+      {/* Lighting */}
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[10, 5, 5]} intensity={1.5} castShadow />
+      <pointLight position={[-10, -5, -5]} intensity={0.3} color="#60a5fa" />
+
+      {/* Stars background */}
+      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+
+      {/* Earth */}
+      <Earth />
+
+      {/* Ground Stations */}
+      {showGroundStations &&
+        groundStations.map((station) => (
+          <GroundStation
+            key={station.name}
+            lat={station.lat}
+            lng={station.lng}
+            name={station.name}
+            color="#00d4ff"
+          />
+        ))}
+
+      {/* Satellites by orbit */}
+      {visibleOrbits.map((orbit) =>
+        Array.from({ length: orbit.satellites }).map((_, index) => (
+          <Satellite
+            key={`${orbit.name}-${index}`}
+            orbitRadius={orbit.radius}
+            orbitSpeed={orbit.speed}
+            orbitTilt={orbit.tilt + (index * 0.1)}
+            orbitOffset={(index / orbit.satellites) * Math.PI * 2}
+            color={orbit.color}
+            size={orbit.name === "GEO" ? 0.12 : 0.08}
+            label={`${orbit.name}-${index + 1}`}
+          />
+        ))
+      )}
+
+      {/* Data transfer visualization (animated lines between satellites) */}
+      {visibleOrbits.length > 1 && (
+        <DataTransferBeams time={time} orbits={visibleOrbits} />
+      )}
+
+      {/* Camera controls */}
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={3}
+        maxDistance={20}
+        autoRotate
+        autoRotateSpeed={0.3}
+      />
+    </>
+  );
+};
+
+// Animated data transfer beams
+const DataTransferBeams = ({ time, orbits }: { time: number; orbits: OrbitConfig[] }) => {
+  const beamCount = 5;
+  
+  return (
+    <>
+      {Array.from({ length: beamCount }).map((_, i) => {
+        const progress = ((time * 0.5 + i * 0.2) % 1);
+        const fromOrbit = orbits[0];
+        const toOrbit = orbits[orbits.length > 1 ? 1 : 0];
+        
+        const angle = (i / beamCount) * Math.PI * 2 + time * 0.3;
+        
+        const startX = Math.cos(angle) * fromOrbit.radius;
+        const startZ = Math.sin(angle) * fromOrbit.radius;
+        const startY = startZ * Math.sin(fromOrbit.tilt);
+        
+        const endX = Math.cos(angle + 0.5) * toOrbit.radius;
+        const endZ = Math.sin(angle + 0.5) * toOrbit.radius;
+        const endY = endZ * Math.sin(toOrbit.tilt);
+        
+        const posX = startX + (endX - startX) * progress;
+        const posY = startY + (endY - startY) * progress;
+        const posZ = startZ * Math.cos(fromOrbit.tilt) + 
+          ((endZ * Math.cos(toOrbit.tilt)) - (startZ * Math.cos(fromOrbit.tilt))) * progress;
+        
+        return (
+          <mesh key={i} position={[posX, posY, posZ]}>
+            <sphereGeometry args={[0.02, 8, 8]} />
+            <meshBasicMaterial
+              color="#00d4ff"
+              transparent
+              opacity={0.8}
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        );
+      })}
+    </>
+  );
+};
+
+const Scene = (props: SceneProps) => {
+  return (
+    <Canvas
+      camera={{ position: [8, 4, 8], fov: 45 }}
+      gl={{ antialias: true, alpha: true }}
+      style={{ background: "transparent" }}
+    >
+      <Suspense fallback={<LoadingFallback />}>
+        <SceneContent {...props} />
+      </Suspense>
+    </Canvas>
+  );
+};
+
+export default Scene;

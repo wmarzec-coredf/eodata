@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ExperimentCard from "@/components/dashboard/ExperimentCard";
@@ -15,6 +15,7 @@ import {
   Search,
   Plus,
   Filter,
+  Globe,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -189,7 +190,13 @@ const Dashboard = () => {
         {/* Quick Actions */}
         <div className="glass-card p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Link to="/visualization">
+              <Button variant="outline" className="w-full h-auto py-4 flex-col gap-2 border-primary/50 hover:bg-primary/10">
+                <Globe className="h-5 w-5 text-primary" />
+                <span className="text-sm">3D Visualization</span>
+              </Button>
+            </Link>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2">
               <Satellite className="h-5 w-5" />
               <span className="text-sm">Add Satellite</span>
