@@ -13,6 +13,8 @@ import {
   Map,
   Globe2,
   Gauge,
+  Play,
+  Pause,
 } from "lucide-react";
 import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
@@ -33,6 +35,7 @@ const Visualization = () => {
   const [showDataTransfer, setShowDataTransfer] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
+  const [isPaused, setIsPaused] = useState(false);
 
   const orbitStats = [
     { name: "LEO", color: "#22c55e", altitude: "200-2,000 km", satellites: 8, active: showLEO },
@@ -215,19 +218,37 @@ const Visualization = () => {
               <Gauge className="h-4 w-4 text-primary" />
               Simulation Speed
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {SPEED_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={simulationSpeed === option.value ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 min-w-[50px]"
-                  onClick={() => setSimulationSpeed(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={() => setIsPaused(!isPaused)}
+              >
+                {isPaused ? (
+                  <Play className="h-4 w-4" />
+                ) : (
+                  <Pause className="h-4 w-4" />
+                )}
+              </Button>
+              <div className="flex flex-wrap gap-1 flex-1">
+                {SPEED_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={simulationSpeed === option.value ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 min-w-[40px] h-9"
+                    onClick={() => setSimulationSpeed(option.value)}
+                    disabled={isPaused}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
+            {isPaused && (
+              <p className="text-xs text-esa-warning">Simulation paused</p>
+            )}
           </div>
 
           {/* Legend */}
@@ -262,6 +283,7 @@ const Visualization = () => {
                 showGroundStations={showGroundStations}
                 showDataTransfer={showDataTransfer}
                 simulationSpeed={simulationSpeed}
+                isPaused={isPaused}
               />
             ) : (
               <GroundTrackMap
@@ -270,6 +292,7 @@ const Visualization = () => {
                 showGEO={showGEO}
                 showGroundStations={showGroundStations}
                 simulationSpeed={simulationSpeed}
+                isPaused={isPaused}
               />
             )}
           </div>
