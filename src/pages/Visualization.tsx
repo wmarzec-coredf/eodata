@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Satellite,
@@ -21,13 +22,16 @@ import {
   Circle,
   Sun,
   Link2,
+  Database,
+  Clock,
 } from "lucide-react";
-import Scene from "@/components/visualization/Scene";
+import Scene, { groundStations } from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import TimeSlider from "@/components/visualization/TimeSlider";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import SimulationClock from "@/components/visualization/SimulationClock";
+import PassPrediction from "@/components/visualization/PassPrediction";
 import esaLogo from "@/assets/esa-logo.svg";
 
 const SPEED_OPTIONS = [
@@ -48,12 +52,15 @@ const Visualization = () => {
   const [showOrbits, setShowOrbits] = useState(true);
   const [showSun, setShowSun] = useState(true);
   const [showGroundLinks, setShowGroundLinks] = useState(true);
+  const [useTLEData, setUseTLEData] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
   const [simulationTime, setSimulationTime] = useState(0);
   const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const baseTime = useMemo(() => new Date(), []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -345,13 +352,37 @@ const Visualization = () => {
                   <Sun className="h-4 w-4 text-yellow-500" />
                   <div>
                     <p className="text-sm font-medium">Sun</p>
-                    <p className="text-xs text-muted-foreground">Show sun light source</p>
+                    <p className="text-xs text-muted-foreground">Day/night cycle</p>
                   </div>
                 </div>
                 <Switch checked={showSun} onCheckedChange={setShowSun} />
               </div>
             )}
+
+            {viewMode === "3d" && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <Database className="h-4 w-4 text-accent" />
+                  <div>
+                    <p className="text-sm font-medium">Real TLE Data</p>
+                    <p className="text-xs text-muted-foreground">Use satellite.js</p>
+                  </div>
+                </div>
+                <Switch checked={useTLEData} onCheckedChange={setUseTLEData} />
+              </div>
+            )}
           </div>
+
+          {/* Pass Prediction */}
+          {viewMode === "3d" && useTLEData && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                Pass Prediction
+              </h3>
+              <PassPrediction groundStations={groundStations} baseTime={baseTime} />
+            </div>
+          )}
 
           {/* Statistics */}
           <div className="space-y-4">
@@ -446,11 +477,13 @@ const Visualization = () => {
                 showTrails={showTrails}
                 showOrbits={showOrbits}
                 showSun={showSun}
+                useTLEData={useTLEData}
                 simulationSpeed={simulationSpeed}
                 isPaused={isPaused}
                 simulationTime={simulationTime}
                 onTimeUpdate={handleTimeUpdate}
                 onSatelliteClick={handleSatelliteClick}
+                selectedSatelliteId={selectedSatellite?.id}
               />
             ) : (
               <GroundTrackMap
