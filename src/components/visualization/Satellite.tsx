@@ -144,8 +144,7 @@ const Satellite = ({
           </mesh>
         )}
 
-        {/* Signal glow */}
-        <pointLight color={color} intensity={1.5} distance={2} />
+        {/* Removed point light to prevent casting on Earth */}
       </group>
     </group>
   );
