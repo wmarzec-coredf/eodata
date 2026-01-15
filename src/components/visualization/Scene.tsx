@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stars, Html } from "@react-three/drei";
 import Earth from "./Earth";
 import Satellite from "./Satellite";
+import Sun from "./Sun";
 import { SatelliteInfo } from "./SatelliteInfoPopup";
 import * as THREE from "three";
 
@@ -45,6 +46,8 @@ interface SceneProps {
   showGroundStations: boolean;
   showDataTransfer: boolean;
   showTrails: boolean;
+  showOrbits: boolean;
+  showSun: boolean;
   simulationSpeed: number;
   isPaused: boolean;
   simulationTime: number;
@@ -59,6 +62,8 @@ const SceneContent = ({
   showGroundStations,
   showDataTransfer,
   showTrails,
+  showOrbits,
+  showSun,
   simulationSpeed,
   isPaused,
   simulationTime,
@@ -95,9 +100,12 @@ const SceneContent = ({
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.2} />
-      <directionalLight position={[10, 5, 5]} intensity={1.5} castShadow />
+      <ambientLight intensity={showSun ? 0.1 : 0.2} />
+      <directionalLight position={[10, 5, 5]} intensity={showSun ? 0.8 : 1.5} castShadow />
       <pointLight position={[-10, -5, -5]} intensity={0.3} color="#60a5fa" />
+
+      {/* Sun */}
+      <Sun visible={showSun} />
 
       {/* Stars background */}
       <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
@@ -122,6 +130,7 @@ const SceneContent = ({
             label={`${orbit.name}-${index + 1}`}
             onClick={() => handleSatelliteClick(orbit.name, index, orbit)}
             showTrail={showTrails}
+            showOrbit={showOrbits}
           />
         ))
       )}
