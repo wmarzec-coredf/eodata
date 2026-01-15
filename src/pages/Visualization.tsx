@@ -12,10 +12,18 @@ import {
   Activity,
   Map,
   Globe2,
+  Gauge,
 } from "lucide-react";
 import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import esaLogo from "@/assets/esa-logo.svg";
+
+const SPEED_OPTIONS = [
+  { label: "1x", value: 1 },
+  { label: "10x", value: 10 },
+  { label: "60x", value: 60 },
+  { label: "100x", value: 100 },
+];
 
 const Visualization = () => {
   const [showLEO, setShowLEO] = useState(true);
@@ -24,6 +32,7 @@ const Visualization = () => {
   const [showGroundStations, setShowGroundStations] = useState(true);
   const [showDataTransfer, setShowDataTransfer] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
+  const [simulationSpeed, setSimulationSpeed] = useState(60);
 
   const orbitStats = [
     { name: "LEO", color: "#22c55e", altitude: "200-2,000 km", satellites: 8, active: showLEO },
@@ -200,6 +209,27 @@ const Visualization = () => {
             </div>
           </div>
 
+          {/* Simulation Speed */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-primary" />
+              Simulation Speed
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {SPEED_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={simulationSpeed === option.value ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 min-w-[50px]"
+                  onClick={() => setSimulationSpeed(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Legend */}
           <div className="mt-auto space-y-2">
             <h3 className="text-sm font-semibold">Controls</h3>
@@ -214,7 +244,7 @@ const Visualization = () => {
                 <>
                   <p>• Ground tracks show orbital paths</p>
                   <p>• Markers indicate current positions</p>
-                  <p>• Animation runs at 60x speed</p>
+                  <p>• Speed: {simulationSpeed}x realtime</p>
                 </>
               )}
             </div>
@@ -231,6 +261,7 @@ const Visualization = () => {
                 showGEO={showGEO}
                 showGroundStations={showGroundStations}
                 showDataTransfer={showDataTransfer}
+                simulationSpeed={simulationSpeed}
               />
             ) : (
               <GroundTrackMap
@@ -238,6 +269,7 @@ const Visualization = () => {
                 showMEO={showMEO}
                 showGEO={showGEO}
                 showGroundStations={showGroundStations}
+                simulationSpeed={simulationSpeed}
               />
             )}
           </div>
