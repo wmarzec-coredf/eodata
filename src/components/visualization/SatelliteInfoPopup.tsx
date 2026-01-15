@@ -41,8 +41,7 @@ const SatelliteInfoPopup = ({ satellite, onClose, position }: SatelliteInfoPopup
 
   return (
     <div
-      className="absolute z-50 glass-card p-4 min-w-[280px] animate-scale-in"
-      style={position ? { left: position.x, top: position.y } : { bottom: 80, left: 16 }}
+      className="glass-card p-4 min-w-[280px] animate-scale-in"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">

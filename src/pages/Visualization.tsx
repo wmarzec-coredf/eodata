@@ -533,11 +533,15 @@ const Visualization = () => {
             />
           </div>
 
-          {/* Satellite info popup */}
-          <SatelliteInfoPopup
-            satellite={selectedSatellite}
-            onClose={handleClosePopup}
-          />
+          {/* Satellite info popup - top right corner */}
+          {selectedSatellite && (
+            <div className="absolute top-4 right-4 z-10">
+              <SatelliteInfoPopup
+                satellite={selectedSatellite}
+                onClose={handleClosePopup}
+              />
+            </div>
+          )}
 
           {/* Mobile controls overlay */}
           <div className="absolute bottom-4 left-4 right-4 lg:hidden">
@@ -581,24 +585,7 @@ const Visualization = () => {
             </div>
           </div>
 
-          {/* Orbit legend overlay */}
-          <div className="absolute top-4 right-4 glass-card p-3 space-y-2">
-            {orbitStats.map((orbit) => (
-              <div
-                key={orbit.name}
-                className={`flex items-center gap-2 text-xs ${
-                  !orbit.active ? "opacity-40" : ""
-                }`}
-              >
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: orbit.color }}
-                />
-                <span>{orbit.name}</span>
-                <span className="text-muted-foreground">({orbit.satellites})</span>
-              </div>
-            ))}
-          </div>
+          {/* Legend removed - satellite info shows in top right on click */}
         </main>
       </div>
     </div>
