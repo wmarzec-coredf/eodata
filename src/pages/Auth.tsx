@@ -1,33 +1,110 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import esaLogo from "@/assets/esa-logo.png";
+import { z } from "zod";
+
+const emailSchema = z.string().email("Please enter a valid email address");
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, signUp, user } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+    
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      newErrors.email = emailResult.error.errors[0].message;
+    }
+    
+    const passwordResult = passwordSchema.safeParse(password);
+    if (!passwordResult.success) {
+      newErrors.password = passwordResult.error.errors[0].message;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsLoading(true);
 
-    // Simulate auth - will be replaced with Supabase auth
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        if (error) {
+          let message = error.message;
+          if (message.includes("Invalid login credentials")) {
+            message = "Invalid email or password. Please try again.";
+          }
+          toast({
+            title: "Login failed",
+            description: message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: "You have been successfully signed in.",
+          });
+          navigate("/dashboard");
+        }
+      } else {
+        const { error } = await signUp(email, password, fullName);
+        if (error) {
+          let message = error.message;
+          if (message.includes("User already registered")) {
+            message = "This email is already registered. Please sign in instead.";
+          }
+          toast({
+            title: "Sign up failed",
+            description: message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Account created!",
+            description: "You have been successfully signed up and logged in.",
+          });
+          navigate("/dashboard");
+        }
+      }
+    } catch (error) {
       toast({
-        title: isLogin ? "Welcome back!" : "Account created!",
-        description: "You have been successfully authenticated.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-      navigate("/dashboard");
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,6 +135,20 @@ const Auth = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="bg-secondary/50 border-border"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -65,10 +156,16 @@ const Auth = () => {
                 type="email"
                 placeholder="your.email@esa.int"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors((prev) => ({ ...prev, email: undefined }));
+                }}
                 required
-                className="bg-secondary/50 border-border"
+                className={`bg-secondary/50 border-border ${errors.email ? 'border-destructive' : ''}`}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -78,10 +175,16 @@ const Auth = () => {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrors((prev) => ({ ...prev, password: undefined }));
+                }}
                 required
-                className="bg-secondary/50 border-border"
+                className={`bg-secondary/50 border-border ${errors.password ? 'border-destructive' : ''}`}
               />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password}</p>
+              )}
             </div>
 
             <Button
