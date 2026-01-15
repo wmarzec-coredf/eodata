@@ -15,8 +15,8 @@ import {
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-// Use the default Cesium Ion token for basic imagery
-Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1YjFhNWQ3Zi0xZTBhLTRiMDktYjRjZS01ZWU2MjgxYjVmYWEiLCJpZCI6MjU5LCJpYXQiOjE3MzU4MzE5ODB9.TlGVJjQ3V_3j9gJz8Z_8B8y6Q_5X7j2M9K8N3L5O7P0";
+// Cesium Ion access token
+Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlZWViZWY4NS1kY2ViLTRjNmItYjM2OS00NWY4MmRjZDY1YTUiLCJpZCI6Mzc5MDgzLCJpYXQiOjE3Njg0ODA2OTN9.xaHKt0sIqM-7mTqizQGILb0yoRGBYSZ9u9zaEiDCaLM";
 
 interface CesiumSceneProps {
   showLEO: boolean;
