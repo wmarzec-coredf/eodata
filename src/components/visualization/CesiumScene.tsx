@@ -1,26 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Viewer,
-  Entity,
-  PolylineGraphics,
-  PointGraphics,
-  CylinderGraphics,
-  PathGraphics,
-} from "resium";
-import {
   Ion,
   Cartesian3,
   Color,
   JulianDate,
-  ClockRange,
-  ClockStep,
   SampledPositionProperty,
-  VelocityOrientationProperty,
-  TimeIntervalCollection,
-  TimeInterval,
+  Entity,
+  PolylineGlowMaterialProperty,
   createWorldTerrainAsync,
-  IonWorldImageryStyle,
-  IonImageryProvider,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -39,8 +27,8 @@ interface SatelliteData {
   id: string;
   name: string;
   orbitType: "LEO" | "MEO" | "GEO";
-  altitude: number; // in km
-  inclination: number; // in degrees
+  altitude: number;
+  inclination: number;
   color: Color;
   startAngle: number;
 }
@@ -50,7 +38,6 @@ interface GroundStationData {
   name: string;
   lat: number;
   lon: number;
-  color: Color;
 }
 
 // Helper to create satellite orbit positions
@@ -62,10 +49,8 @@ const createOrbitPath = (
   duration: number
 ): SampledPositionProperty => {
   const property = new SampledPositionProperty();
-  const earthRadius = 6371; // km
+  const earthRadius = 6371;
   const orbitRadius = earthRadius + altitude;
-  
-  // Calculate orbital period (simplified Kepler's 3rd law approximation)
   const orbitalPeriod = 2 * Math.PI * Math.sqrt(Math.pow(orbitRadius, 3) / 398600.4418);
   
   const numSamples = 360;
@@ -75,7 +60,6 @@ const createOrbitPath = (
     const time = JulianDate.addSeconds(startTime, (i / numSamples) * duration, new JulianDate());
     const angle = startAngle + ((i / numSamples) * duration / orbitalPeriod) * 2 * Math.PI;
     
-    // Calculate position in orbital plane
     const x = orbitRadius * Math.cos(angle);
     const y = orbitRadius * Math.sin(angle) * Math.cos(inclinationRad);
     const z = orbitRadius * Math.sin(angle) * Math.sin(inclinationRad);
@@ -92,7 +76,7 @@ const createOrbitPath = (
   return property;
 };
 
-// Generate orbit line points for visualization
+// Generate orbit line points
 const generateOrbitPoints = (
   altitude: number,
   inclination: number,
@@ -127,12 +111,13 @@ const CesiumScene = ({
   showGEO,
   showGroundStations,
 }: CesiumSceneProps) => {
-  const viewerRef = useRef<any>(null);
-  const [isReady, setIsReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Viewer | null>(null);
+  const entitiesRef = useRef<Map<string, Entity>>(new Map());
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Define satellites
   const satellites: SatelliteData[] = [
-    // LEO satellites (200-2000 km)
     { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
     { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
     { id: "leo3", name: "Sentinel-3A", orbitType: "LEO", altitude: 814, inclination: 98.65, color: Color.LIME, startAngle: Math.PI },
@@ -141,151 +126,174 @@ const CesiumScene = ({
     { id: "leo6", name: "Aeolus", orbitType: "LEO", altitude: 320, inclination: 97, color: Color.LIME, startAngle: Math.PI * 0.75 },
     { id: "leo7", name: "GOCE", orbitType: "LEO", altitude: 260, inclination: 96.5, color: Color.LIME, startAngle: Math.PI * 1.25 },
     { id: "leo8", name: "Swarm-A", orbitType: "LEO", altitude: 462, inclination: 87.35, color: Color.LIME, startAngle: Math.PI * 1.75 },
-    
-    // MEO satellites (2000-35786 km)
     { id: "meo1", name: "Galileo-1", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: 0 },
     { id: "meo2", name: "Galileo-2", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI / 2 },
     { id: "meo3", name: "Galileo-3", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI },
     { id: "meo4", name: "Galileo-4", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI * 1.5 },
-    
-    // GEO satellites (35786 km)
     { id: "geo1", name: "Meteosat-11", orbitType: "GEO", altitude: 35786, inclination: 0, color: Color.RED, startAngle: 0 },
     { id: "geo2", name: "Meteosat-10", orbitType: "GEO", altitude: 35786, inclination: 0, color: Color.RED, startAngle: Math.PI * 0.66 },
     { id: "geo3", name: "MSG-4", orbitType: "GEO", altitude: 35786, inclination: 0, color: Color.RED, startAngle: Math.PI * 1.33 },
   ];
 
-  // Ground stations
   const groundStations: GroundStationData[] = [
-    { id: "gs1", name: "Kiruna", lat: 67.857, lon: 20.964, color: Color.CYAN },
-    { id: "gs2", name: "Redu", lat: 50.002, lon: 5.146, color: Color.CYAN },
-    { id: "gs3", name: "Cebreros", lat: 40.453, lon: -4.368, color: Color.CYAN },
-    { id: "gs4", name: "Maspalomas", lat: 27.763, lon: -15.633, color: Color.CYAN },
-    { id: "gs5", name: "Kourou", lat: 5.252, lon: -52.786, color: Color.CYAN },
-    { id: "gs6", name: "New Norcia", lat: -31.048, lon: 116.192, color: Color.CYAN },
+    { id: "gs1", name: "Kiruna", lat: 67.857, lon: 20.964 },
+    { id: "gs2", name: "Redu", lat: 50.002, lon: 5.146 },
+    { id: "gs3", name: "Cebreros", lat: 40.453, lon: -4.368 },
+    { id: "gs4", name: "Maspalomas", lat: 27.763, lon: -15.633 },
+    { id: "gs5", name: "Kourou", lat: 5.252, lon: -52.786 },
+    { id: "gs6", name: "New Norcia", lat: -31.048, lon: 116.192 },
   ];
 
-  const startTime = JulianDate.now();
-
-  // Filter satellites based on visibility
-  const visibleSatellites = satellites.filter((sat) => {
-    if (sat.orbitType === "LEO") return showLEO;
-    if (sat.orbitType === "MEO") return showMEO;
-    if (sat.orbitType === "GEO") return showGEO;
-    return true;
-  });
-
+  // Initialize Cesium viewer
   useEffect(() => {
-    // Small delay to ensure Cesium is fully initialized
-    const timer = setTimeout(() => setIsReady(true), 100);
-    return () => clearTimeout(timer);
+    if (!containerRef.current || viewerRef.current) return;
+
+    const initViewer = async () => {
+      try {
+        const viewer = new Viewer(containerRef.current!, {
+          animation: false,
+          timeline: false,
+          homeButton: false,
+          sceneModePicker: false,
+          baseLayerPicker: false,
+          navigationHelpButton: false,
+          geocoder: false,
+          fullscreenButton: false,
+          vrButton: false,
+          selectionIndicator: true,
+          infoBox: true,
+        });
+
+        // Set terrain
+        try {
+          viewer.terrainProvider = await createWorldTerrainAsync();
+        } catch (e) {
+          console.log("Could not load terrain, using default");
+        }
+
+        // Set initial camera position
+        viewer.camera.setView({
+          destination: Cartesian3.fromDegrees(0, 20, 25000000),
+        });
+
+        viewerRef.current = viewer;
+        setIsInitialized(true);
+      } catch (error) {
+        console.error("Error initializing Cesium viewer:", error);
+      }
+    };
+
+    initViewer();
+
+    return () => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.destroy();
+        viewerRef.current = null;
+      }
+    };
   }, []);
 
+  // Update entities based on visibility toggles
+  useEffect(() => {
+    if (!viewerRef.current || !isInitialized) return;
+
+    const viewer = viewerRef.current;
+    const startTime = JulianDate.now();
+
+    // Clear existing entities
+    viewer.entities.removeAll();
+    entitiesRef.current.clear();
+
+    // Add ground stations
+    if (showGroundStations) {
+      groundStations.forEach((station) => {
+        const entity = viewer.entities.add({
+          id: station.id,
+          name: station.name,
+          position: Cartesian3.fromDegrees(station.lon, station.lat, 0),
+          point: {
+            pixelSize: 10,
+            color: Color.CYAN,
+            outlineColor: Color.WHITE,
+            outlineWidth: 2,
+          },
+          cylinder: {
+            length: 500000,
+            topRadius: 50000,
+            bottomRadius: 200000,
+            material: Color.CYAN.withAlpha(0.2),
+            outline: true,
+            outlineColor: Color.CYAN.withAlpha(0.5),
+          },
+          description: `<div style="padding: 8px;"><h3>${station.name}</h3><p>ESA Ground Station</p></div>`,
+        });
+        entitiesRef.current.set(station.id, entity);
+      });
+    }
+
+    // Filter and add satellites
+    const visibleSatellites = satellites.filter((sat) => {
+      if (sat.orbitType === "LEO") return showLEO;
+      if (sat.orbitType === "MEO") return showMEO;
+      if (sat.orbitType === "GEO") return showGEO;
+      return true;
+    });
+
+    visibleSatellites.forEach((sat) => {
+      // Add orbit path
+      const orbitPoints = generateOrbitPoints(sat.altitude, sat.inclination);
+      viewer.entities.add({
+        id: `orbit-${sat.id}`,
+        polyline: {
+          positions: orbitPoints,
+          width: 1,
+          material: new PolylineGlowMaterialProperty({
+            glowPower: 0.2,
+            color: sat.color.withAlpha(0.3),
+          }),
+        },
+      });
+
+      // Add satellite
+      const position = createOrbitPath(sat.altitude, sat.inclination, sat.startAngle, startTime, 86400);
+      const entity = viewer.entities.add({
+        id: sat.id,
+        name: sat.name,
+        position: position,
+        point: {
+          pixelSize: 8,
+          color: sat.color,
+          outlineColor: Color.WHITE,
+          outlineWidth: 1,
+        },
+        path: {
+          width: 2,
+          material: sat.color.withAlpha(0.5),
+          leadTime: 1800,
+          trailTime: 1800,
+        },
+        description: `
+          <div style="padding: 8px;">
+            <h3 style="margin: 0 0 8px 0;">${sat.name}</h3>
+            <p style="margin: 4px 0;"><strong>Orbit:</strong> ${sat.orbitType}</p>
+            <p style="margin: 4px 0;"><strong>Altitude:</strong> ${sat.altitude.toLocaleString()} km</p>
+            <p style="margin: 4px 0;"><strong>Inclination:</strong> ${sat.inclination}°</p>
+          </div>
+        `,
+      });
+      entitiesRef.current.set(sat.id, entity);
+    });
+
+    // Start the clock
+    viewer.clock.shouldAnimate = true;
+
+  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations]);
+
   return (
-    <Viewer
-      ref={viewerRef}
-      full
-      timeline={false}
-      animation={false}
-      homeButton={false}
-      sceneModePicker={false}
-      baseLayerPicker={false}
-      navigationHelpButton={false}
-      geocoder={false}
-      fullscreenButton={false}
-      vrButton={false}
-      selectionIndicator={true}
-      infoBox={true}
-    >
-      {isReady && (
-        <>
-          {/* Ground Stations */}
-          {showGroundStations &&
-            groundStations.map((station) => (
-              <Entity
-                key={station.id}
-                name={station.name}
-                description={`ESA Ground Station: ${station.name}`}
-                position={Cartesian3.fromDegrees(station.lon, station.lat, 0)}
-              >
-                <PointGraphics
-                  pixelSize={10}
-                  color={station.color}
-                  outlineColor={Color.WHITE}
-                  outlineWidth={2}
-                />
-                <CylinderGraphics
-                  length={500000}
-                  topRadius={50000}
-                  bottomRadius={200000}
-                  material={Color.CYAN.withAlpha(0.2)}
-                  outline={true}
-                  outlineColor={Color.CYAN.withAlpha(0.5)}
-                />
-              </Entity>
-            ))}
-
-          {/* Orbit paths */}
-          {visibleSatellites.map((sat) => (
-            <Entity key={`orbit-${sat.id}`}>
-              <PolylineGraphics
-                positions={generateOrbitPoints(sat.altitude, sat.inclination)}
-                width={1}
-                material={sat.color.withAlpha(0.3)}
-              />
-            </Entity>
-          ))}
-
-          {/* Satellites */}
-          {visibleSatellites.map((sat) => {
-            const position = createOrbitPath(
-              sat.altitude,
-              sat.inclination,
-              sat.startAngle,
-              startTime,
-              86400 // 24 hours
-            );
-
-            return (
-              <Entity
-                key={sat.id}
-                name={sat.name}
-                description={`
-                  <div style="padding: 8px;">
-                    <h3 style="margin: 0 0 8px 0;">${sat.name}</h3>
-                    <p style="margin: 4px 0;"><strong>Orbit:</strong> ${sat.orbitType}</p>
-                    <p style="margin: 4px 0;"><strong>Altitude:</strong> ${sat.altitude.toLocaleString()} km</p>
-                    <p style="margin: 4px 0;"><strong>Inclination:</strong> ${sat.inclination}°</p>
-                  </div>
-                `}
-                position={position}
-                orientation={new VelocityOrientationProperty(position) as any}
-                availability={
-                  new TimeIntervalCollection([
-                    new TimeInterval({
-                      start: startTime,
-                      stop: JulianDate.addSeconds(startTime, 86400, new JulianDate()),
-                    }),
-                  ])
-                }
-              >
-                <PointGraphics
-                  pixelSize={8}
-                  color={sat.color}
-                  outlineColor={Color.WHITE}
-                  outlineWidth={1}
-                />
-                <PathGraphics
-                  width={2}
-                  material={sat.color.withAlpha(0.5)}
-                  leadTime={1800}
-                  trailTime={1800}
-                />
-              </Entity>
-            );
-          })}
-        </>
-      )}
-    </Viewer>
+    <div 
+      ref={containerRef} 
+      style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
+    />
   );
 };
 
