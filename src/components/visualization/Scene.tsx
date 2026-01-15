@@ -113,7 +113,9 @@ const SceneContent = ({
       {/* Earth with ground stations */}
       <Earth 
         showGroundStations={showGroundStations} 
-        groundStations={groundStations} 
+        groundStations={groundStations}
+        showDayNight={showSun}
+        sunPosition={[25, 10, -15]}
       />
 
       {/* Satellites by orbit */}
