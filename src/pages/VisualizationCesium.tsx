@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -10,14 +10,14 @@ import {
   Globe,
   Radio,
   Activity,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
+  Loader2,
 } from "lucide-react";
-import Scene from "@/components/visualization/Scene";
 import esaLogo from "@/assets/esa-logo.svg";
 
-const Visualization = () => {
+// Lazy load CesiumScene to avoid SSR issues
+const CesiumScene = lazy(() => import("@/components/visualization/CesiumScene"));
+
+const VisualizationCesium = () => {
   const [showLEO, setShowLEO] = useState(true);
   const [showMEO, setShowMEO] = useState(true);
   const [showGEO, setShowGEO] = useState(true);
@@ -45,14 +45,14 @@ const Visualization = () => {
             <div className="h-6 w-px bg-border" />
             <img src={esaLogo} alt="ESA" className="h-6 w-auto" />
             <span className="text-sm font-medium hidden md:block">
-              Satellite Constellation Viewer
+              Cesium Satellite Viewer
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link to="/visualization-cesium">
+            <Link to="/visualization">
               <Button variant="outline" size="sm">
-                Cesium View
+                Three.js View
               </Button>
             </Link>
             <Badge variant="outline" className="gap-1.5 bg-esa-success/20 text-esa-success border-esa-success/30">
@@ -162,28 +162,38 @@ const Visualization = () => {
             </div>
           </div>
 
-          {/* Legend */}
+          {/* CesiumJS info */}
           <div className="mt-auto space-y-2">
-            <h3 className="text-sm font-semibold">Controls</h3>
+            <h3 className="text-sm font-semibold">About This View</h3>
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>• Click + drag to rotate view</p>
-              <p>• Scroll to zoom in/out</p>
-              <p>• Right-click + drag to pan</p>
+              <p>Powered by CesiumJS with:</p>
+              <p>• Photorealistic Earth imagery</p>
+              <p>• Accurate satellite positioning</p>
+              <p>• Real orbit calculations</p>
             </div>
           </div>
         </aside>
 
-        {/* 3D Viewer */}
+        {/* Cesium Viewer */}
         <main className="flex-1 relative">
-          <div className="absolute inset-0">
-            <Scene
+          <Suspense
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Loading CesiumJS...</p>
+                </div>
+              </div>
+            }
+          >
+            <CesiumScene
               showLEO={showLEO}
               showMEO={showMEO}
               showGEO={showGEO}
               showGroundStations={showGroundStations}
               showDataTransfer={showDataTransfer}
             />
-          </div>
+          </Suspense>
 
           {/* Mobile controls overlay */}
           <div className="absolute bottom-4 left-4 right-4 lg:hidden">
@@ -227,4 +237,4 @@ const Visualization = () => {
   );
 };
 
-export default Visualization;
+export default VisualizationCesium;
