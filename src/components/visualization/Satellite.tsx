@@ -69,17 +69,17 @@ const Satellite = ({
         {/* Main body */}
         <mesh>
           <boxGeometry args={[size, size * 0.5, size * 0.5]} />
-          <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial color={color} metalness={0.3} roughness={0.4} emissive={color} emissiveIntensity={0.5} />
         </mesh>
 
         {/* Solar panels */}
         <mesh position={[size * 1.2, 0, 0]}>
           <boxGeometry args={[size * 1.5, size * 0.05, size * 0.8]} />
-          <meshStandardMaterial color="#1e40af" metalness={0.6} roughness={0.3} />
+          <meshStandardMaterial color="#60a5fa" metalness={0.4} roughness={0.3} emissive="#3b82f6" emissiveIntensity={0.3} />
         </mesh>
         <mesh position={[-size * 1.2, 0, 0]}>
           <boxGeometry args={[size * 1.5, size * 0.05, size * 0.8]} />
-          <meshStandardMaterial color="#1e40af" metalness={0.6} roughness={0.3} />
+          <meshStandardMaterial color="#60a5fa" metalness={0.4} roughness={0.3} emissive="#3b82f6" emissiveIntensity={0.3} />
         </mesh>
 
         {/* Antenna */}
@@ -97,7 +97,7 @@ const Satellite = ({
         )}
 
         {/* Signal glow */}
-        <pointLight color={color} intensity={0.5} distance={1} />
+        <pointLight color={color} intensity={1.5} distance={2} />
       </group>
     </group>
   );
