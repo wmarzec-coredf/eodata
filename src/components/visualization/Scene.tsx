@@ -4,6 +4,7 @@ import { OrbitControls, Stars, Html } from "@react-three/drei";
 import Earth from "./Earth";
 import Satellite from "./Satellite";
 import Sun from "./Sun";
+import GroundLinks from "./GroundLinks";
 import { SatelliteInfo } from "./SatelliteInfoPopup";
 import * as THREE from "three";
 
@@ -45,6 +46,7 @@ interface SceneProps {
   showGEO: boolean;
   showGroundStations: boolean;
   showDataTransfer: boolean;
+  showGroundLinks: boolean;
   showTrails: boolean;
   showOrbits: boolean;
   showSun: boolean;
@@ -61,6 +63,7 @@ const SceneContent = ({
   showGEO,
   showGroundStations,
   showDataTransfer,
+  showGroundLinks,
   showTrails,
   showOrbits,
   showSun,
@@ -141,6 +144,13 @@ const SceneContent = ({
       {showDataTransfer && visibleOrbits.length > 1 && (
         <DataTransferBeams time={simulationTime} orbits={visibleOrbits} />
       )}
+
+      {/* Ground station to satellite communication links */}
+      <GroundLinks
+        visible={showGroundLinks && showGroundStations}
+        groundStations={groundStations}
+        time={simulationTime}
+      />
 
       {/* Camera controls */}
       <OrbitControls

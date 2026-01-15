@@ -20,12 +20,14 @@ import {
   Minimize,
   Circle,
   Sun,
+  Link2,
 } from "lucide-react";
 import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import TimeSlider from "@/components/visualization/TimeSlider";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
+import SimulationClock from "@/components/visualization/SimulationClock";
 import esaLogo from "@/assets/esa-logo.svg";
 
 const SPEED_OPTIONS = [
@@ -45,6 +47,7 @@ const Visualization = () => {
   const [showTrails, setShowTrails] = useState(true);
   const [showOrbits, setShowOrbits] = useState(true);
   const [showSun, setShowSun] = useState(true);
+  const [showGroundLinks, setShowGroundLinks] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
@@ -300,6 +303,19 @@ const Visualization = () => {
             {viewMode === "3d" && (
               <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                 <div className="flex items-center gap-3">
+                  <Link2 className="h-4 w-4 text-accent" />
+                  <div>
+                    <p className="text-sm font-medium">Ground Links</p>
+                    <p className="text-xs text-muted-foreground">Station to satellite</p>
+                  </div>
+                </div>
+                <Switch checked={showGroundLinks} onCheckedChange={setShowGroundLinks} />
+              </div>
+            )}
+
+            {viewMode === "3d" && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
                   <Circle className="h-4 w-4 text-accent" />
                   <div>
                     <p className="text-sm font-medium">Orbit Lines</p>
@@ -426,6 +442,7 @@ const Visualization = () => {
                 showGEO={showGEO}
                 showGroundStations={showGroundStations}
                 showDataTransfer={showDataTransfer}
+                showGroundLinks={showGroundLinks}
                 showTrails={showTrails}
                 showOrbits={showOrbits}
                 showSun={showSun}
@@ -456,6 +473,15 @@ const Visualization = () => {
               time={simulationTime}
               onTimeChange={handleTimeChange}
               onReset={handleTimeReset}
+            />
+          </div>
+
+          {/* Simulation clock */}
+          <div className="absolute top-4 left-4 z-10 hidden lg:block">
+            <SimulationClock
+              simulationTime={simulationTime}
+              simulationSpeed={simulationSpeed}
+              isPaused={isPaused}
             />
           </div>
 
