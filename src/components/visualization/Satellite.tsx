@@ -13,6 +13,7 @@ interface SatelliteProps {
   label?: string;
   onClick?: () => void;
   showTrail?: boolean;
+  showOrbit?: boolean;
   trailLength?: number;
 }
 
@@ -25,6 +26,7 @@ const Satellite = ({
   size = 0.08,
   onClick,
   showTrail = true,
+  showOrbit = true,
   trailLength = 50,
 }: SatelliteProps) => {
   const groupRef = useRef<THREE.Group>(null);
@@ -89,13 +91,15 @@ const Satellite = ({
   return (
     <group ref={groupRef} rotation={[orbitTilt, 0, 0]}>
       {/* Orbit path */}
-      <Line
-        points={orbitPoints}
-        color={color}
-        lineWidth={1}
-        transparent
-        opacity={0.3}
-      />
+      {showOrbit && (
+        <Line
+          points={orbitPoints}
+          color={color}
+          lineWidth={1}
+          transparent
+          opacity={0.3}
+        />
+      )}
 
       {/* Trail effect */}
       {showTrail && trailPoints.length > 1 && (
