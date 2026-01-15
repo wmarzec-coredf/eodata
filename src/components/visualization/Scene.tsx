@@ -3,7 +3,6 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stars, Html } from "@react-three/drei";
 import Earth from "./Earth";
 import Satellite from "./Satellite";
-import GroundStation from "./GroundStation";
 import * as THREE from "three";
 
 interface OrbitConfig {
@@ -49,6 +48,7 @@ const SceneContent = ({
   showMEO,
   showGEO,
   showGroundStations,
+  showDataTransfer,
 }: SceneProps) => {
   const [time, setTime] = useState(0);
 
@@ -76,20 +76,11 @@ const SceneContent = ({
       {/* Stars background */}
       <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
-      {/* Earth */}
-      <Earth />
-
-      {/* Ground Stations */}
-      {showGroundStations &&
-        groundStations.map((station) => (
-          <GroundStation
-            key={station.name}
-            lat={station.lat}
-            lng={station.lng}
-            name={station.name}
-            color="#00d4ff"
-          />
-        ))}
+      {/* Earth with ground stations */}
+      <Earth 
+        showGroundStations={showGroundStations} 
+        groundStations={groundStations} 
+      />
 
       {/* Satellites by orbit */}
       {visibleOrbits.map((orbit) =>
@@ -107,8 +98,8 @@ const SceneContent = ({
         ))
       )}
 
-      {/* Data transfer visualization (animated lines between satellites) */}
-      {visibleOrbits.length > 1 && (
+      {/* Data transfer visualization */}
+      {showDataTransfer && visibleOrbits.length > 1 && (
         <DataTransferBeams time={time} orbits={visibleOrbits} />
       )}
 
