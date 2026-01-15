@@ -41,6 +41,7 @@ interface SceneProps {
   showGEO: boolean;
   showGroundStations: boolean;
   showDataTransfer: boolean;
+  simulationSpeed: number;
 }
 
 const SceneContent = ({
@@ -49,15 +50,16 @@ const SceneContent = ({
   showGEO,
   showGroundStations,
   showDataTransfer,
+  simulationSpeed,
 }: SceneProps) => {
   const [time, setTime] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime((t) => t + 0.016);
+      setTime((t) => t + 0.016 * simulationSpeed);
     }, 16);
     return () => clearInterval(interval);
-  }, []);
+  }, [simulationSpeed]);
 
   const visibleOrbits = orbitConfigs.filter((orbit) => {
     if (orbit.name === "LEO") return showLEO;

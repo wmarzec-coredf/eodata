@@ -22,6 +22,7 @@ interface GroundTrackMapProps {
   showMEO: boolean;
   showGEO: boolean;
   showGroundStations: boolean;
+  simulationSpeed: number;
 }
 
 const GroundTrackMap = ({
@@ -29,6 +30,7 @@ const GroundTrackMap = ({
   showMEO,
   showGEO,
   showGroundStations,
+  simulationSpeed,
 }: GroundTrackMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -290,8 +292,7 @@ const GroundTrackMap = ({
       const delta = (now - lastTime) / 1000;
       lastTime = now;
       
-      // 60x speed
-      setTime((t) => t + delta * 60);
+      setTime((t) => t + delta * simulationSpeed);
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -302,7 +303,7 @@ const GroundTrackMap = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []);
+  }, [simulationSpeed]);
 
   // Handle resize
   useEffect(() => {
