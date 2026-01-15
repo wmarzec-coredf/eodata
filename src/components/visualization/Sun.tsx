@@ -4,9 +4,10 @@ import * as THREE from "three";
 
 interface SunProps {
   visible: boolean;
+  position?: [number, number, number];
 }
 
-const Sun = ({ visible }: SunProps) => {
+const Sun = ({ visible, position = [25, 10, -15] }: SunProps) => {
   const sunRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
 
@@ -26,7 +27,7 @@ const Sun = ({ visible }: SunProps) => {
   if (!visible) return null;
 
   return (
-    <group position={[25, 10, -15]}>
+    <group position={position}>
       {/* Sun core */}
       <mesh ref={sunRef}>
         <sphereGeometry args={[2, 32, 32]} />
@@ -66,8 +67,8 @@ const Sun = ({ visible }: SunProps) => {
         />
       </mesh>
 
-      {/* Sun light source */}
-      <pointLight color="#fcd34d" intensity={2} distance={100} decay={1} />
+      {/* Sun point light for nearby effects */}
+      <pointLight color="#fcd34d" intensity={3} distance={50} decay={1} />
     </group>
   );
 };
