@@ -1,4 +1,5 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { SatelliteInfo } from "./SatelliteInfoPopup";
 
 interface SatelliteTrack {
   id: string;
@@ -24,6 +25,9 @@ interface GroundTrackMapProps {
   showGroundStations: boolean;
   simulationSpeed: number;
   isPaused: boolean;
+  simulationTime: number;
+  onTimeUpdate: (delta: number) => void;
+  onSatelliteClick: (satellite: SatelliteInfo) => void;
 }
 
 const GroundTrackMap = ({
@@ -33,11 +37,14 @@ const GroundTrackMap = ({
   showGroundStations,
   simulationSpeed,
   isPaused,
+  simulationTime,
+  onTimeUpdate,
+  onSatelliteClick,
 }: GroundTrackMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
-  const [time, setTime] = useState(0);
   const [earthImage, setEarthImage] = useState<HTMLImageElement | null>(null);
+  const satellitePositionsRef = useRef<Map<string, { x: number; y: number; satellite: SatelliteTrack }>>(new Map());
 
   // Load Earth texture
   useEffect(() => {
@@ -160,7 +167,7 @@ const GroundTrackMap = ({
 
       // Draw ground tracks (past and future orbits)
       visibleSatellites.forEach((satellite) => {
-        drawGroundTrack(ctx, satellite, time, width, height);
+        drawGroundTrack(ctx, satellite, simulationTime, width, height);
       });
 
       // Draw ground stations
@@ -185,10 +192,20 @@ const GroundTrackMap = ({
         });
       }
 
+      // Clear satellite positions for click detection
+      satellitePositionsRef.current.clear();
+
       // Draw current satellite positions
       visibleSatellites.forEach((satellite) => {
-        const pos = getGroundTrackPosition(satellite, time);
+        const pos = getGroundTrackPosition(satellite, simulationTime);
         const canvasPos = latLonToCanvas(pos.lat, pos.lon, width, height);
+        
+        // Store position for click detection
+        satellitePositionsRef.current.set(satellite.id, {
+          x: canvasPos.x,
+          y: canvasPos.y,
+          satellite,
+        });
         
         // Satellite marker
         ctx.beginPath();
@@ -283,7 +300,7 @@ const GroundTrackMap = ({
     };
 
     draw();
-  }, [time, showLEO, showMEO, showGEO, showGroundStations, earthImage]);
+  }, [simulationTime, showLEO, showMEO, showGEO, showGroundStations, earthImage]);
 
   // Animation loop
   useEffect(() => {
@@ -296,7 +313,7 @@ const GroundTrackMap = ({
       const delta = (now - lastTime) / 1000;
       lastTime = now;
       
-      setTime((t) => t + delta * simulationSpeed);
+      onTimeUpdate(delta * simulationSpeed);
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -307,7 +324,7 @@ const GroundTrackMap = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [simulationSpeed, isPaused]);
+  }, [simulationSpeed, isPaused, onTimeUpdate]);
 
   // Handle resize
   useEffect(() => {
@@ -328,15 +345,48 @@ const GroundTrackMap = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Handle canvas click for satellite selection
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if clicked on a satellite
+    for (const [_, data] of satellitePositionsRef.current) {
+      const dx = x - data.x;
+      const dy = y - data.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance <= 12) {
+        const pos = getGroundTrackPosition(data.satellite, simulationTime);
+        onSatelliteClick({
+          id: data.satellite.id,
+          name: data.satellite.name,
+          orbitType: data.satellite.orbitType,
+          altitude: data.satellite.altitude,
+          inclination: data.satellite.inclination,
+          color: data.satellite.color,
+          lat: pos.lat,
+          lon: pos.lon,
+        });
+        return;
+      }
+    }
+  }, [simulationTime, onSatelliteClick]);
+
   return (
     <div className="w-full h-full relative bg-[#0a0f1a]">
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        className="w-full h-full cursor-pointer"
+        onClick={handleCanvasClick}
       />
       
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 glass-card p-3 text-xs space-y-1">
+      <div className="absolute bottom-20 left-4 glass-card p-3 text-xs space-y-1">
         <div className="font-semibold text-foreground mb-2">Ground Track View</div>
         {showLEO && (
           <div className="flex items-center gap-2">
@@ -362,7 +412,7 @@ const GroundTrackMap = ({
       <div className="absolute top-4 left-4 glass-card px-3 py-2 text-xs">
         <span className="text-muted-foreground">Simulation Time: </span>
         <span className="font-mono text-primary">
-          {new Date(Date.now() + time * 1000).toUTCString().slice(0, -4)} UTC
+          {new Date(Date.now() + simulationTime * 1000).toUTCString().slice(0, -4)} UTC
         </span>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stars, Html } from "@react-three/drei";
 import Earth from "./Earth";
 import Satellite from "./Satellite";
+import { SatelliteInfo } from "./SatelliteInfoPopup";
 import * as THREE from "three";
 
 interface OrbitConfig {
@@ -12,12 +13,14 @@ interface OrbitConfig {
   satellites: number;
   speed: number;
   tilt: number;
+  altitude: number;
+  inclination: number;
 }
 
 const orbitConfigs: OrbitConfig[] = [
-  { name: "LEO", color: "#22c55e", radius: 2.8, satellites: 8, speed: 0.8, tilt: 0.4 },
-  { name: "MEO", color: "#eab308", radius: 4, satellites: 4, speed: 0.4, tilt: 0.2 },
-  { name: "GEO", color: "#ef4444", radius: 5.5, satellites: 3, speed: 0.1, tilt: 0 },
+  { name: "LEO", color: "#22c55e", radius: 2.8, satellites: 8, speed: 0.8, tilt: 0.4, altitude: 550, inclination: 53 },
+  { name: "MEO", color: "#eab308", radius: 4, satellites: 4, speed: 0.4, tilt: 0.2, altitude: 20200, inclination: 55 },
+  { name: "GEO", color: "#ef4444", radius: 5.5, satellites: 3, speed: 0.1, tilt: 0, altitude: 35786, inclination: 0 },
 ];
 
 const groundStations = [
@@ -43,6 +46,9 @@ interface SceneProps {
   showDataTransfer: boolean;
   simulationSpeed: number;
   isPaused: boolean;
+  simulationTime: number;
+  onTimeUpdate: (delta: number) => void;
+  onSatelliteClick: (satellite: SatelliteInfo) => void;
 }
 
 const SceneContent = ({
@@ -53,17 +59,18 @@ const SceneContent = ({
   showDataTransfer,
   simulationSpeed,
   isPaused,
+  simulationTime,
+  onTimeUpdate,
+  onSatelliteClick,
 }: SceneProps) => {
-  const [time, setTime] = useState(0);
-
   useEffect(() => {
     if (isPaused) return;
     
     const interval = setInterval(() => {
-      setTime((t) => t + 0.016 * simulationSpeed);
+      onTimeUpdate(0.016 * simulationSpeed);
     }, 16);
     return () => clearInterval(interval);
-  }, [simulationSpeed, isPaused]);
+  }, [simulationSpeed, isPaused, onTimeUpdate]);
 
   const visibleOrbits = orbitConfigs.filter((orbit) => {
     if (orbit.name === "LEO") return showLEO;
@@ -71,6 +78,17 @@ const SceneContent = ({
     if (orbit.name === "GEO") return showGEO;
     return true;
   });
+
+  const handleSatelliteClick = useCallback((orbitName: string, index: number, orbit: OrbitConfig) => {
+    onSatelliteClick({
+      id: `${orbitName}-${index}`,
+      name: `${orbitName}-${index + 1}`,
+      orbitType: orbitName as "LEO" | "MEO" | "GEO",
+      altitude: orbit.altitude,
+      inclination: orbit.inclination,
+      color: orbit.color,
+    });
+  }, [onSatelliteClick]);
 
   return (
     <>
@@ -100,13 +118,14 @@ const SceneContent = ({
             color={orbit.color}
             size={orbit.name === "GEO" ? 0.12 : 0.08}
             label={`${orbit.name}-${index + 1}`}
+            onClick={() => handleSatelliteClick(orbit.name, index, orbit)}
           />
         ))
       )}
 
       {/* Data transfer visualization */}
       {showDataTransfer && visibleOrbits.length > 1 && (
-        <DataTransferBeams time={time} orbits={visibleOrbits} />
+        <DataTransferBeams time={simulationTime} orbits={visibleOrbits} />
       )}
 
       {/* Camera controls */}

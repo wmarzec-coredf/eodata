@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
+import TimeSlider from "@/components/visualization/TimeSlider";
+import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
 import esaLogo from "@/assets/esa-logo.svg";
 
 const SPEED_OPTIONS = [
@@ -36,6 +38,29 @@ const Visualization = () => {
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
+  const [simulationTime, setSimulationTime] = useState(0);
+  const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
+
+  const handleTimeChange = useCallback((time: number) => {
+    setSimulationTime(time);
+    setIsPaused(true); // Pause when scrubbing
+  }, []);
+
+  const handleTimeReset = useCallback(() => {
+    setSimulationTime(0);
+  }, []);
+
+  const handleTimeUpdate = useCallback((delta: number) => {
+    setSimulationTime((t) => t + delta);
+  }, []);
+
+  const handleSatelliteClick = useCallback((satellite: SatelliteInfo) => {
+    setSelectedSatellite(satellite);
+  }, []);
+
+  const handleClosePopup = useCallback(() => {
+    setSelectedSatellite(null);
+  }, []);
 
   const orbitStats = [
     { name: "LEO", color: "#22c55e", altitude: "200-2,000 km", satellites: 8, active: showLEO },
@@ -259,12 +284,12 @@ const Visualization = () => {
                 <>
                   <p>• Click + drag to rotate view</p>
                   <p>• Scroll to zoom in/out</p>
-                  <p>• Right-click + drag to pan</p>
+                  <p>• Click satellite for info</p>
                 </>
               ) : (
                 <>
-                  <p>• Ground tracks show orbital paths</p>
-                  <p>• Markers indicate current positions</p>
+                  <p>• Click satellite for details</p>
+                  <p>• Use slider to scrub time</p>
                   <p>• Speed: {simulationSpeed}x realtime</p>
                 </>
               )}
@@ -284,6 +309,9 @@ const Visualization = () => {
                 showDataTransfer={showDataTransfer}
                 simulationSpeed={simulationSpeed}
                 isPaused={isPaused}
+                simulationTime={simulationTime}
+                onTimeUpdate={handleTimeUpdate}
+                onSatelliteClick={handleSatelliteClick}
               />
             ) : (
               <GroundTrackMap
@@ -293,9 +321,27 @@ const Visualization = () => {
                 showGroundStations={showGroundStations}
                 simulationSpeed={simulationSpeed}
                 isPaused={isPaused}
+                simulationTime={simulationTime}
+                onTimeUpdate={handleTimeUpdate}
+                onSatelliteClick={handleSatelliteClick}
               />
             )}
           </div>
+
+          {/* Time slider */}
+          <div className="absolute bottom-4 left-4 right-4 lg:left-auto lg:right-4 lg:w-96 z-10">
+            <TimeSlider
+              time={simulationTime}
+              onTimeChange={handleTimeChange}
+              onReset={handleTimeReset}
+            />
+          </div>
+
+          {/* Satellite info popup */}
+          <SatelliteInfoPopup
+            satellite={selectedSatellite}
+            onClose={handleClosePopup}
+          />
 
           {/* Mobile controls overlay */}
           <div className="absolute bottom-4 left-4 right-4 lg:hidden">
