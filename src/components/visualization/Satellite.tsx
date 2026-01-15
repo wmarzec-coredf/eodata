@@ -1,5 +1,5 @@
 import { useRef, useMemo } from "react";
-import { useFrame, extend } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -11,6 +11,7 @@ interface SatelliteProps {
   color: string;
   size?: number;
   label?: string;
+  onClick?: () => void;
 }
 
 const Satellite = ({
@@ -20,6 +21,7 @@ const Satellite = ({
   orbitOffset,
   color,
   size = 0.08,
+  onClick,
 }: SatelliteProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const satelliteRef = useRef<THREE.Group>(null);
@@ -63,7 +65,7 @@ const Satellite = ({
       />
 
       {/* Satellite */}
-      <group ref={satelliteRef}>
+      <group ref={satelliteRef} onClick={onClick}>
         {/* Main body */}
         <mesh>
           <boxGeometry args={[size, size * 0.5, size * 0.5]} />
@@ -85,6 +87,14 @@ const Satellite = ({
           <cylinderGeometry args={[size * 0.05, size * 0.05, size * 0.3]} />
           <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
         </mesh>
+
+        {/* Clickable hitbox (larger invisible sphere) */}
+        {onClick && (
+          <mesh visible={false}>
+            <sphereGeometry args={[size * 3, 8, 8]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+        )}
 
         {/* Signal glow */}
         <pointLight color={color} intensity={0.5} distance={1} />
