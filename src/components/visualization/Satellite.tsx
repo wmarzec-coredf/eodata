@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import * as THREE from "three";
@@ -12,6 +12,8 @@ interface SatelliteProps {
   size?: number;
   label?: string;
   onClick?: () => void;
+  showTrail?: boolean;
+  trailLength?: number;
 }
 
 const Satellite = ({
@@ -22,10 +24,14 @@ const Satellite = ({
   color,
   size = 0.08,
   onClick,
+  showTrail = true,
+  trailLength = 50,
 }: SatelliteProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const satelliteRef = useRef<THREE.Group>(null);
   const angleRef = useRef(orbitOffset);
+  const [trailPoints, setTrailPoints] = useState<[number, number, number][]>([]);
+  const frameCountRef = useRef(0);
 
   // Create orbit line points
   const orbitPoints = useMemo(() => {
@@ -43,15 +49,42 @@ const Satellite = ({
 
   useFrame((_, delta) => {
     angleRef.current += delta * orbitSpeed;
+    frameCountRef.current += 1;
     
     if (satelliteRef.current) {
-      satelliteRef.current.position.x = Math.cos(angleRef.current) * orbitRadius;
-      satelliteRef.current.position.z = Math.sin(angleRef.current) * orbitRadius;
+      const x = Math.cos(angleRef.current) * orbitRadius;
+      const z = Math.sin(angleRef.current) * orbitRadius;
+      
+      satelliteRef.current.position.x = x;
+      satelliteRef.current.position.z = z;
       
       // Make satellite face direction of travel
       satelliteRef.current.rotation.y = -angleRef.current + Math.PI / 2;
+
+      // Update trail every 3 frames for performance
+      if (showTrail && frameCountRef.current % 3 === 0) {
+        setTrailPoints((prev) => {
+          const newPoint: [number, number, number] = [x, 0, z];
+          const updated = [...prev, newPoint];
+          if (updated.length > trailLength) {
+            return updated.slice(-trailLength);
+          }
+          return updated;
+        });
+      }
     }
   });
+
+  // Create gradient colors for trail (fading effect)
+  const trailColors = useMemo(() => {
+    if (trailPoints.length < 2) return [];
+    return trailPoints.map((_, i) => {
+      const opacity = (i / trailPoints.length) * 0.8;
+      const col = new THREE.Color(color);
+      col.multiplyScalar(0.3 + opacity * 0.7);
+      return col;
+    });
+  }, [trailPoints, color]);
 
   return (
     <group ref={groupRef} rotation={[orbitTilt, 0, 0]}>
@@ -63,6 +96,17 @@ const Satellite = ({
         transparent
         opacity={0.3}
       />
+
+      {/* Trail effect */}
+      {showTrail && trailPoints.length > 1 && (
+        <Line
+          points={trailPoints}
+          vertexColors={trailColors}
+          lineWidth={2}
+          transparent
+          opacity={0.9}
+        />
+      )}
 
       {/* Satellite */}
       <group ref={satelliteRef} onClick={onClick}>
