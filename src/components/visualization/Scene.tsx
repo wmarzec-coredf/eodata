@@ -18,9 +18,9 @@ interface OrbitConfig {
 }
 
 const orbitConfigs: OrbitConfig[] = [
-  { name: "LEO", color: "#22c55e", radius: 2.8, satellites: 8, speed: 0.8, tilt: 0.4, altitude: 550, inclination: 53 },
-  { name: "MEO", color: "#eab308", radius: 4, satellites: 4, speed: 0.4, tilt: 0.2, altitude: 20200, inclination: 55 },
-  { name: "GEO", color: "#ef4444", radius: 5.5, satellites: 3, speed: 0.1, tilt: 0, altitude: 35786, inclination: 0 },
+  { name: "LEO", color: "#4ade80", radius: 2.8, satellites: 8, speed: 0.8, tilt: 0.4, altitude: 550, inclination: 53 },
+  { name: "MEO", color: "#facc15", radius: 4, satellites: 4, speed: 0.4, tilt: 0.2, altitude: 20200, inclination: 55 },
+  { name: "GEO", color: "#f97316", radius: 5.5, satellites: 3, speed: 0.1, tilt: 0, altitude: 35786, inclination: 0 },
 ];
 
 const groundStations = [
