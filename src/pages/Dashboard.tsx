@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ExperimentCard from "@/components/dashboard/ExperimentCard";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Satellite,
   Database,
@@ -56,12 +58,20 @@ const mockExperiments = [
   },
 ];
 
+const roleColors = {
+  admin: "bg-destructive/20 text-destructive border-destructive/30",
+  researcher: "bg-primary/20 text-primary border-primary/30",
+  viewer: "bg-muted text-muted-foreground border-muted-foreground/30",
+};
+
 const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, role, signOut } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -84,9 +94,18 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader userEmail="researcher@esa.int" onLogout={handleLogout} />
+      <DashboardHeader userEmail={user?.email} onLogout={handleLogout} />
 
       <main className="container mx-auto px-6 py-8">
+        {/* Role Badge */}
+        {role && (
+          <div className="mb-6 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Your role:</span>
+            <Badge variant="outline" className={roleColors[role]}>
+              {role.charAt(0).toUpperCase() + role.slice(1)}
+            </Badge>
+          </div>
+        )}
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
