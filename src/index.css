@@ -172,6 +172,48 @@
   }
 }
 
+/* Cesium viewer styles */
+.cesium-container {
+  background: hsl(var(--background));
+}
+
+.cesium-viewer .cesium-widget-credits {
+  display: none !important;
+}
+
+.cesium-viewer .cesium-viewer-bottom {
+  z-index: 10;
+}
+
+.cesium-viewer .cesium-viewer-toolbar {
+  background: hsl(var(--card) / 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.cesium-viewer .cesium-button {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.cesium-viewer .cesium-button:hover {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.cesium-viewer .cesium-infoBox {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.cesium-viewer .cesium-infoBox-title {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
 @layer utilities {
   .animate-float {
     animation: float 6s ease-in-out infinite;
