@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Bell, Settings, LogOut, User } from "lucide-react";
-import esaLogo from "@/assets/esa-logo.png";
+import esaLogo from "@/assets/esa-logo.svg";
 import {
   DropdownMenu,
   DropdownMenuContent,
