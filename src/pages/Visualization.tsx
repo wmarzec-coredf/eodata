@@ -15,6 +15,7 @@ import {
   Gauge,
   Play,
   Pause,
+  Sparkles,
 } from "lucide-react";
 import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
@@ -35,6 +36,7 @@ const Visualization = () => {
   const [showGEO, setShowGEO] = useState(true);
   const [showGroundStations, setShowGroundStations] = useState(true);
   const [showDataTransfer, setShowDataTransfer] = useState(true);
+  const [showTrails, setShowTrails] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
@@ -212,6 +214,19 @@ const Visualization = () => {
                 <Switch checked={showDataTransfer} onCheckedChange={setShowDataTransfer} />
               </div>
             )}
+
+            {viewMode === "3d" && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  <div>
+                    <p className="text-sm font-medium">Satellite Trails</p>
+                    <p className="text-xs text-muted-foreground">Show orbital paths</p>
+                  </div>
+                </div>
+                <Switch checked={showTrails} onCheckedChange={setShowTrails} />
+              </div>
+            )}
           </div>
 
           {/* Statistics */}
@@ -307,6 +322,7 @@ const Visualization = () => {
                 showGEO={showGEO}
                 showGroundStations={showGroundStations}
                 showDataTransfer={showDataTransfer}
+                showTrails={showTrails}
                 simulationSpeed={simulationSpeed}
                 isPaused={isPaused}
                 simulationTime={simulationTime}

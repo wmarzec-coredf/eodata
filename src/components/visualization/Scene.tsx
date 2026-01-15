@@ -44,6 +44,7 @@ interface SceneProps {
   showGEO: boolean;
   showGroundStations: boolean;
   showDataTransfer: boolean;
+  showTrails: boolean;
   simulationSpeed: number;
   isPaused: boolean;
   simulationTime: number;
@@ -57,6 +58,7 @@ const SceneContent = ({
   showGEO,
   showGroundStations,
   showDataTransfer,
+  showTrails,
   simulationSpeed,
   isPaused,
   simulationTime,
@@ -119,6 +121,7 @@ const SceneContent = ({
             size={orbit.name === "GEO" ? 0.12 : 0.08}
             label={`${orbit.name}-${index + 1}`}
             onClick={() => handleSatelliteClick(orbit.name, index, orbit)}
+            showTrail={showTrails}
           />
         ))
       )}
