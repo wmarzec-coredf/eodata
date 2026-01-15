@@ -1,4 +1,4 @@
-import esaLogo from "@/assets/esa-logo.png";
+import esaLogo from "@/assets/esa-logo.svg";
 
 const Footer = () => {
   return (

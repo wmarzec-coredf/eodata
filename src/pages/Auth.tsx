@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import esaLogo from "@/assets/esa-logo.png";
+import esaLogo from "@/assets/esa-logo.svg";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");

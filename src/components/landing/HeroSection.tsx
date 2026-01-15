@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Satellite, Globe, Database } from "lucide-react";
 import { Link } from "react-router-dom";
-import esaLogo from "@/assets/esa-logo.png";
+import esaLogo from "@/assets/esa-logo.svg";
 
 const HeroSection = () => {
   return (
