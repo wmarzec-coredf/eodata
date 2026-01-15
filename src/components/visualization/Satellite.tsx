@@ -14,6 +14,7 @@ interface SatelliteProps {
   onClick?: () => void;
   showTrail?: boolean;
   showOrbit?: boolean;
+  showGlow?: boolean;
   trailLength?: number;
 }
 
@@ -27,6 +28,7 @@ const Satellite = ({
   onClick,
   showTrail = true,
   showOrbit = true,
+  showGlow = false,
   trailLength = 50,
 }: SatelliteProps) => {
   const groupRef = useRef<THREE.Group>(null);
@@ -144,7 +146,8 @@ const Satellite = ({
           </mesh>
         )}
 
-        {/* Removed point light to prevent casting on Earth */}
+        {/* Optional signal glow */}
+        {showGlow && <pointLight color={color} intensity={1.5} distance={2} />}
       </group>
     </group>
   );

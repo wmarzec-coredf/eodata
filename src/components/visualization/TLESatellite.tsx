@@ -12,6 +12,7 @@ interface TLESatelliteProps {
   onClick?: () => void;
   showTrail?: boolean;
   showOrbit?: boolean;
+  showGlow?: boolean;
   size?: number;
   selected?: boolean;
 }
@@ -23,6 +24,7 @@ const TLESatellite = ({
   onClick,
   showTrail = true,
   showOrbit = true,
+  showGlow = false,
   size = 0.06,
   selected = false,
 }: TLESatelliteProps) => {
@@ -195,7 +197,8 @@ const TLESatellite = ({
           </mesh>
         )}
 
-        {/* Removed point light to prevent casting on Earth */}
+        {/* Optional glow */}
+        {showGlow && <pointLight color={color} intensity={selected ? 2 : 1} distance={1.5} />}
       </group>
     </group>
   );

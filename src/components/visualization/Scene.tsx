@@ -46,6 +46,7 @@ interface SceneProps {
   showTrails: boolean;
   showOrbits: boolean;
   showSun: boolean;
+  showSatelliteGlow: boolean;
   useTLEData: boolean;
   simulationSpeed: number;
   isPaused: boolean;
@@ -67,6 +68,7 @@ const SceneContent = ({
   showTrails,
   showOrbits,
   showSun,
+  showSatelliteGlow,
   useTLEData,
   simulationSpeed,
   isPaused,
@@ -205,6 +207,7 @@ const SceneContent = ({
           onClick={() => handleTLESatelliteClick(tle)}
           showTrail={showTrails}
           showOrbit={showOrbits}
+          showGlow={showSatelliteGlow}
           selected={selectedSatelliteId === tle.name}
         />
       ))}
@@ -224,6 +227,7 @@ const SceneContent = ({
             onClick={() => handleLegacySatelliteClick(orbit.name, index, orbit)}
             showTrail={showTrails}
             showOrbit={showOrbits}
+            showGlow={showSatelliteGlow}
           />
         ))
       )}
