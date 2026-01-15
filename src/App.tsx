@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Visualization from "./pages/Visualization";
+import VisualizationCesium from "./pages/VisualizationCesium";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin", "researcher", "viewer"]}>
                   <Visualization />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/visualization-cesium"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "researcher", "viewer"]}>
+                  <VisualizationCesium />
                 </ProtectedRoute>
               }
             />
