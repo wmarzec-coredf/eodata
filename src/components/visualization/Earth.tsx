@@ -12,19 +12,29 @@ interface GroundStationData {
 interface EarthProps {
   showGroundStations?: boolean;
   groundStations?: GroundStationData[];
+  showDayNight?: boolean;
+  sunPosition?: [number, number, number];
 }
 
-const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) => {
+const Earth = ({ 
+  showGroundStations = false, 
+  groundStations = [],
+  showDayNight = false,
+  sunPosition = [25, 10, -15],
+}: EarthProps) => {
   const earthGroupRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
+  const nightRef = useRef<THREE.Mesh>(null);
   const [textures, setTextures] = useState<{
     earth: THREE.Texture | null;
     bump: THREE.Texture | null;
     clouds: THREE.Texture | null;
+    night: THREE.Texture | null;
   }>({
     earth: null,
     bump: null,
     clouds: null,
+    night: null,
   });
 
   // Load textures
@@ -34,6 +44,7 @@ const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) 
     const earthUrl = "https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg";
     const bumpUrl = "https://unpkg.com/three-globe@2.31.0/example/img/earth-topology.png";
     const cloudsUrl = "https://unpkg.com/three-globe@2.31.0/example/img/earth-clouds.png";
+    const nightUrl = "https://unpkg.com/three-globe@2.31.0/example/img/earth-night.jpg";
     
     loader.load(earthUrl, (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -46,6 +57,11 @@ const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) 
     
     loader.load(cloudsUrl, (texture) => {
       setTextures(prev => ({ ...prev, clouds: texture }));
+    });
+
+    loader.load(nightUrl, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      setTextures(prev => ({ ...prev, night: texture }));
     });
   }, []);
 
@@ -93,6 +109,35 @@ const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) 
       shininess: 5,
     });
   }, [textures.earth, textures.bump, fallbackMaterial]);
+
+  // Night side material with city lights
+  const nightMaterial = useMemo(() => {
+    if (!textures.night) {
+      // Create a fallback night texture with city lights
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, 512, 256);
+      
+      // Add random city lights
+      ctx.fillStyle = "#fbbf24";
+      for (let i = 0; i < 200; i++) {
+        const x = Math.random() * 512;
+        const y = 50 + Math.random() * 150; // Mostly in habitable zones
+        const size = Math.random() * 2 + 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      return texture;
+    }
+    return textures.night;
+  }, [textures.night]);
 
   const cloudMaterial = useMemo(() => {
     if (!textures.clouds) {
@@ -151,6 +196,12 @@ const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) 
     }
   });
 
+  // Calculate day/night shader uniforms based on sun position
+  const sunDir = useMemo(() => {
+    const dir = new THREE.Vector3(...sunPosition).normalize();
+    return dir;
+  }, [sunPosition]);
+
   return (
     <group>
       {/* Earth and ground stations rotate together */}
@@ -159,6 +210,54 @@ const Earth = ({ showGroundStations = false, groundStations = [] }: EarthProps) 
         <Sphere args={[2, 64, 64]}>
           <primitive object={earthMaterial} attach="material" />
         </Sphere>
+
+        {/* Night side with city lights (only when day/night enabled) */}
+        {showDayNight && (
+          <Sphere ref={nightRef} args={[2.001, 64, 64]}>
+            <meshBasicMaterial
+              map={nightMaterial}
+              transparent
+              opacity={0.8}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              side={THREE.FrontSide}
+            />
+          </Sphere>
+        )}
+
+        {/* Shadow overlay for day/night cycle */}
+        {showDayNight && (
+          <mesh>
+            <sphereGeometry args={[2.002, 64, 64]} />
+            <shaderMaterial
+              transparent
+              depthWrite={false}
+              uniforms={{
+                sunDirection: { value: sunDir },
+              }}
+              vertexShader={`
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                void main() {
+                  vNormal = normalize(normalMatrix * normal);
+                  vPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `}
+              fragmentShader={`
+                uniform vec3 sunDirection;
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                void main() {
+                  float intensity = dot(vNormal, sunDirection);
+                  float shadow = smoothstep(-0.2, 0.3, intensity);
+                  float darkness = 1.0 - shadow;
+                  gl_FragColor = vec4(0.0, 0.0, 0.05, darkness * 0.7);
+                }
+              `}
+            />
+          </mesh>
+        )}
 
         {/* Ground Stations - now inside the rotating group */}
         {showGroundStations &&

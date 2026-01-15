@@ -25,6 +25,7 @@ import Scene from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import TimeSlider from "@/components/visualization/TimeSlider";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
+import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import esaLogo from "@/assets/esa-logo.svg";
 
 const SPEED_OPTIONS = [
@@ -172,6 +173,13 @@ const Visualization = () => {
                 <span className="hidden sm:inline">2D Map</span>
               </Button>
             </div>
+            
+            <SatelliteSearch
+              onSelectSatellite={handleSatelliteClick}
+              showLEO={showLEO}
+              showMEO={showMEO}
+              showGEO={showGEO}
+            />
             
             <Link to="/visualization-cesium">
               <Button variant="outline" size="sm">
