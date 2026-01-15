@@ -250,7 +250,7 @@ const SceneContent = ({
         enableZoom={true}
         enableRotate={true}
         minDistance={3}
-        maxDistance={20}
+        maxDistance={50}
         autoRotate
         autoRotateSpeed={0.3}
       />
@@ -303,7 +303,7 @@ const DataTransferBeams = ({ time, orbits }: { time: number; orbits: OrbitConfig
 const Scene = (props: SceneProps) => {
   return (
     <Canvas
-      camera={{ position: [8, 4, 8], fov: 45 }}
+      camera={{ position: [12, 8, 12], fov: 50 }}
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
       shadows={false}
