@@ -195,8 +195,7 @@ const TLESatellite = ({
           </mesh>
         )}
 
-        {/* Glow */}
-        <pointLight color={color} intensity={selected ? 2 : 1} distance={1.5} />
+        {/* Removed point light to prevent casting on Earth */}
       </group>
     </group>
   );

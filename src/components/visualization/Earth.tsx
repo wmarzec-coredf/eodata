@@ -281,10 +281,7 @@ const Earth = ({
           })}
       </group>
 
-      {/* Clouds layer - separate rotation */}
-      <Sphere ref={cloudsRef} args={[2.02, 64, 64]}>
-        <primitive object={cloudMaterial} attach="material" />
-      </Sphere>
+      {/* Clouds layer removed */}
 
       {/* Atmosphere glow - doesn't rotate */}
       <Sphere args={[2.08, 64, 64]}>
