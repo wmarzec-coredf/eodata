@@ -33,6 +33,15 @@ const GroundTrackMap = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const [time, setTime] = useState(0);
+  const [earthImage, setEarthImage] = useState<HTMLImageElement | null>(null);
+
+  // Load Earth texture
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => setEarthImage(img);
+    img.src = "https://unpkg.com/three-globe@2.24.13/example/img/earth-blue-marble.jpg";
+  }, []);
 
   const satellites: SatelliteTrack[] = [
     { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: "#22c55e", startAngle: 0 },
@@ -122,8 +131,17 @@ const GroundTrackMap = ({
       ctx.fillStyle = "#0a0f1a";
       ctx.fillRect(0, 0, width, height);
 
-      // Draw world map (simplified continents)
-      drawWorldMap(ctx, width, height);
+      // Draw Earth map
+      if (earthImage) {
+        ctx.drawImage(earthImage, 0, 0, width, height);
+        // Add slight darkening overlay for better visibility
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.fillRect(0, 0, width, height);
+      } else {
+        // Fallback dark background while loading
+        ctx.fillStyle = "#1a3a5c";
+        ctx.fillRect(0, 0, width, height);
+      }
 
       // Draw grid lines
       drawGrid(ctx, width, height);
@@ -182,71 +200,6 @@ const GroundTrackMap = ({
         ctx.fillStyle = satellite.color;
         ctx.textAlign = "center";
         ctx.fillText(satellite.name, canvasPos.x, canvasPos.y - 12);
-      });
-    };
-
-    const drawWorldMap = (
-      ctx: CanvasRenderingContext2D,
-      width: number,
-      height: number
-    ) => {
-      // Simple world map outline
-      ctx.strokeStyle = "#00d4ff";
-      ctx.lineWidth = 1;
-      ctx.fillStyle = "#00d4ff20";
-
-      // Simplified continent paths (approximate)
-      const continents = [
-        // North America
-        [
-          [-170, 65], [-140, 70], [-100, 70], [-80, 75], [-60, 65],
-          [-55, 50], [-65, 45], [-75, 35], [-80, 25], [-90, 20],
-          [-105, 20], [-120, 30], [-125, 40], [-125, 50], [-140, 60], [-170, 65]
-        ],
-        // South America
-        [
-          [-80, 10], [-60, 5], [-35, -5], [-35, -20], [-40, -25],
-          [-55, -25], [-65, -40], [-75, -55], [-70, -50], [-70, -35],
-          [-80, -5], [-80, 10]
-        ],
-        // Europe
-        [
-          [-10, 35], [0, 40], [10, 45], [25, 40], [30, 45],
-          [40, 45], [30, 60], [25, 70], [10, 70], [-5, 60],
-          [-10, 50], [-10, 35]
-        ],
-        // Africa
-        [
-          [-15, 35], [10, 35], [35, 30], [40, 10], [50, 10],
-          [50, 0], [40, -15], [35, -35], [20, -35], [15, -25],
-          [10, -5], [-5, 5], [-15, 15], [-15, 35]
-        ],
-        // Asia
-        [
-          [30, 45], [60, 40], [80, 45], [100, 40], [120, 50],
-          [140, 45], [145, 50], [140, 55], [130, 60], [100, 70],
-          [70, 75], [50, 70], [40, 60], [30, 45]
-        ],
-        // Australia
-        [
-          [115, -20], [130, -15], [145, -15], [150, -25], [150, -35],
-          [145, -40], [135, -35], [130, -35], [115, -25], [115, -20]
-        ],
-      ];
-
-      continents.forEach((continent) => {
-        ctx.beginPath();
-        continent.forEach((point, i) => {
-          const pos = latLonToCanvas(point[1], point[0], width, height);
-          if (i === 0) {
-            ctx.moveTo(pos.x, pos.y);
-          } else {
-            ctx.lineTo(pos.x, pos.y);
-          }
-        });
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
       });
     };
 
@@ -326,7 +279,7 @@ const GroundTrackMap = ({
     };
 
     draw();
-  }, [time, showLEO, showMEO, showGEO, showGroundStations]);
+  }, [time, showLEO, showMEO, showGEO, showGroundStations, earthImage]);
 
   // Animation loop
   useEffect(() => {
