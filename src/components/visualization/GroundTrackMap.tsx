@@ -23,6 +23,7 @@ interface GroundTrackMapProps {
   showGEO: boolean;
   showGroundStations: boolean;
   simulationSpeed: number;
+  isPaused: boolean;
 }
 
 const GroundTrackMap = ({
@@ -31,6 +32,7 @@ const GroundTrackMap = ({
   showGEO,
   showGroundStations,
   simulationSpeed,
+  isPaused,
 }: GroundTrackMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -285,6 +287,8 @@ const GroundTrackMap = ({
 
   // Animation loop
   useEffect(() => {
+    if (isPaused) return;
+    
     let lastTime = Date.now();
     
     const animate = () => {
@@ -303,7 +307,7 @@ const GroundTrackMap = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [simulationSpeed]);
+  }, [simulationSpeed, isPaused]);
 
   // Handle resize
   useEffect(() => {
