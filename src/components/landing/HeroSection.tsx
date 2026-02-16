@@ -43,7 +43,7 @@ const HeroSection = () => {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
-          <Link to="/auth">
+          <Link to="/dashboard">
             <Button size="lg" className="group bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg">
               Access Dashboard
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
