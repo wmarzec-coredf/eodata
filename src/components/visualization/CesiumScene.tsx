@@ -10,6 +10,7 @@ import {
   JulianDate,
   SampledPositionProperty,
   PolylineGlowMaterialProperty,
+  PolylineDashMaterialProperty,
   ClockRange,
   ClockStep,
   IonImageryProvider,
@@ -437,10 +438,12 @@ const CesiumScene = ({
               id: `isl-${pairKey}-${now}`,
               polyline: {
                 positions: [posA, posB],
-                width: 1.5,
-                material: new PolylineGlowMaterialProperty({
-                  glowPower: 0.25,
-                  color: Color.fromCssColorString("#00ffaa").withAlpha(0.6),
+                width: 2,
+                material: new PolylineDashMaterialProperty({
+                  color: Color.fromCssColorString("#00ffaa").withAlpha(0.7),
+                  gapColor: Color.TRANSPARENT,
+                  dashLength: 16,
+                  dashPattern: 255,
                 }),
               },
             });
@@ -498,10 +501,12 @@ const CesiumScene = ({
               id: `gsl-${gs.id}-${bestSat.sat.id}-${now}`,
               polyline: {
                 positions: [gsPosition, bestSat.position],
-                width: 1.2,
-                material: new PolylineGlowMaterialProperty({
-                  glowPower: 0.2,
+                width: 1.5,
+                material: new PolylineDashMaterialProperty({
                   color: linkColor,
+                  gapColor: Color.TRANSPARENT,
+                  dashLength: 12,
+                  dashPattern: 255,
                 }),
               },
             });
