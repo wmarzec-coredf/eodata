@@ -431,54 +431,51 @@ const CesiumScene = ({
       });
 
       // Inter-satellite links: connect each satellite to its nearest neighbor within range
+      // Each satellite can only have ONE inter-satellite link
       if (showDataTransfer) {
-        const connected = new Set<string>();
-        satPositions.forEach(({ sat: satA, position: posA }) => {
-          let nearestDist = Infinity;
-          let nearestIdx = -1;
-
-          satPositions.forEach(({ sat: satB, position: posB }, j) => {
-            if (satA.id === satB.id) return;
-            const pairKey = [satA.id, satB.id].sort().join("-");
-            if (connected.has(pairKey)) return;
-            const dist = getDistance(posA, posB);
-            if (dist < nearestDist && dist <= MAX_INTER_SAT_DISTANCE_KM) {
-              nearestDist = dist;
-              nearestIdx = j;
+        const linkedSats = new Set<string>(); // track satellites already linked
+        
+        // Build candidate pairs sorted by distance
+        const pairs: { a: typeof satPositions[0]; b: typeof satPositions[0]; dist: number }[] = [];
+        for (let i = 0; i < satPositions.length; i++) {
+          for (let j = i + 1; j < satPositions.length; j++) {
+            const dist = getDistance(satPositions[i].position, satPositions[j].position);
+            if (dist <= MAX_INTER_SAT_DISTANCE_KM) {
+              pairs.push({ a: satPositions[i], b: satPositions[j], dist });
             }
-          });
-
-          if (nearestIdx >= 0) {
-            const { sat: satB, position: posB } = satPositions[nearestIdx];
-            const pairKey = [satA.id, satB.id].sort().join("-");
-            connected.add(pairKey);
-
-            // Track connections
-            if (!satLinks[satA.id]) satLinks[satA.id] = [];
-            if (!satLinks[satB.id]) satLinks[satB.id] = [];
-            satLinks[satA.id].push(satB.id);
-            satLinks[satB.id].push(satA.id);
-
-            const entity = viewer.entities.add({
-              id: `isl-${pairKey}-${now}`,
-              polyline: {
-                positions: [posA, posB],
-                width: 3,
-                material: new PolylineDashMaterialProperty({
-                  color: Color.fromCssColorString("#ff44ff").withAlpha(0.8),
-                  gapColor: Color.TRANSPARENT,
-                  dashLength: 24,
-                  dashPattern: 255,
-                }),
-              },
-            });
-            linkEntities.push(entity);
           }
+        }
+        pairs.sort((x, y) => x.dist - y.dist);
+
+        pairs.forEach(({ a, b, dist }) => {
+          if (linkedSats.has(a.sat.id) || linkedSats.has(b.sat.id)) return;
+          linkedSats.add(a.sat.id);
+          linkedSats.add(b.sat.id);
+
+          satLinks[a.sat.id] = [b.sat.id];
+          satLinks[b.sat.id] = [a.sat.id];
+
+          const entity = viewer.entities.add({
+            id: `isl-${a.sat.id}-${b.sat.id}-${now}`,
+            polyline: {
+              positions: [a.position, b.position],
+              width: 3,
+              material: new PolylineDashMaterialProperty({
+                color: Color.fromCssColorString("#ff44ff").withAlpha(0.8),
+                gapColor: Color.TRANSPARENT,
+                dashLength: 24,
+                dashPattern: 255,
+              }),
+            },
+          });
+          linkEntities.push(entity);
         });
       }
 
-      // Ground station links: connect each station to the nearest visible satellite
+      // Ground station links: each satellite can connect to at most ONE ground station
       if (showGroundLinks && showGroundStations) {
+        const gsLinkedSats = new Set<string>(); // satellites already linked to a ground station
+
         groundStationsList.forEach((gs) => {
           const gsLat = (gs.lat * Math.PI) / 180;
           const gsLon = (gs.lon * Math.PI) / 180;
@@ -487,6 +484,8 @@ const CesiumScene = ({
           let bestSat: { sat: SatelliteData; position: Cartesian3; elevation: number } | null = null;
 
           satPositions.forEach(({ sat, position: satPosition }) => {
+            if (gsLinkedSats.has(sat.id)) return; // already connected to another station
+
             const satCartographic = Cartographic.fromCartesian(satPosition);
             const satLat = satCartographic.latitude;
             const satLon = satCartographic.longitude;
@@ -497,7 +496,6 @@ const CesiumScene = ({
               Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon);
             const centralAngle = Math.acos(Math.min(1, Math.max(-1, cosCA)));
 
-            // Proper elevation angle: angle above horizon from ground station
             const R = EARTH_RADIUS;
             const r = R + satAlt;
             const elevationRad = Math.atan2(
@@ -514,13 +512,13 @@ const CesiumScene = ({
           });
 
           if (bestSat) {
+            gsLinkedSats.add(bestSat.sat.id);
+
             let linkColor = Color.CYAN.withAlpha(0.4);
             if (bestSat.sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.35);
             if (bestSat.sat.orbitType === "GEO") linkColor = Color.ORANGERED.withAlpha(0.35);
 
-            // Track ground station connection
-            if (!gsLinks[bestSat.sat.id]) gsLinks[bestSat.sat.id] = [];
-            gsLinks[bestSat.sat.id].push(gs.name);
+            gsLinks[bestSat.sat.id] = [gs.name];
 
             const entity = viewer.entities.add({
               id: `gsl-${gs.id}-${bestSat.sat.id}-${now}`,
