@@ -468,27 +468,6 @@ const CesiumScene = ({
           },
           description: `<div style="padding: 8px;"><h3>${station.name}</h3><p>ESA Ground Station</p><p>Lat: ${station.lat.toFixed(3)}°</p><p>Lon: ${station.lon.toFixed(3)}°</p></div>`,
         });
-
-        // Persistent pulse entity for ground station (hidden by default)
-        viewer.entities.add({
-          id: `pulse-${station.id}`,
-          position: Cartesian3.fromDegrees(station.lon, station.lat, 0),
-          show: false,
-          point: {
-            pixelSize: new CallbackProperty(() => {
-              const t = (Date.now() % 2000) / 2000;
-              return 8 + Math.sin(t * Math.PI * 2) * 8;
-            }, false) as any,
-            color: new CallbackProperty(() => {
-              const t = (Date.now() % 2000) / 2000;
-              const alpha = 0.6 - Math.sin(t * Math.PI * 2) * 0.4;
-              return Color.CYAN.withAlpha(Math.max(0.05, alpha));
-            }, false) as any,
-            outlineColor: Color.CYAN.withAlpha(0.3),
-            outlineWidth: 1,
-            heightReference: 1,
-          },
-        });
       });
     }
 
@@ -575,25 +554,6 @@ const CesiumScene = ({
             <p style="margin: 4px 0;"><strong>Period:</strong> ${Math.round(2 * Math.PI * Math.sqrt(Math.pow(6371 + sat.altitude, 3) / 398600.4418) / 60)} min</p>
           </div>
         `,
-      });
-
-      // Persistent satellite glow entity (hidden by default, toggled by tick handler)
-      viewer.entities.add({
-        id: `sat-glow-${sat.id}`,
-        position: position,
-        show: false,
-        point: {
-          pixelSize: new CallbackProperty(() => {
-            const t = (Date.now() % 1500) / 1500;
-            return 6 + Math.sin(t * Math.PI * 2) * 6;
-          }, false) as any,
-          color: new CallbackProperty(() => {
-            const t = (Date.now() % 1500) / 1500;
-            const alpha = 0.5 - Math.sin(t * Math.PI * 2) * 0.35;
-            return Color.fromCssColorString("#ff44ff").withAlpha(Math.max(0.05, alpha));
-          }, false) as any,
-          outlineWidth: 0,
-        },
       });
     });
   }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails]);
@@ -693,14 +653,6 @@ const CesiumScene = ({
           });
           linkEntities.push(entity);
         });
-
-        // Toggle visibility of persistent satellite glow entities
-        satellites.forEach((sat) => {
-          const glowEntity = viewer.entities.getById(`sat-glow-${sat.id}`);
-          if (glowEntity) {
-            glowEntity.show = linkedSats.has(sat.id);
-          }
-        });
       }
 
       // Ground station links: each satellite can connect to at most ONE ground station
@@ -769,13 +721,6 @@ const CesiumScene = ({
           }
         });
 
-        // Toggle visibility of persistent ground station pulse entities
-        groundStationsList.forEach((gs) => {
-          const pulseEntity = viewer.entities.getById(`pulse-${gs.id}`);
-          if (pulseEntity) {
-            pulseEntity.show = !!stationToSat[gs.id];
-          }
-        });
       }
 
       // Store connections for click handler
