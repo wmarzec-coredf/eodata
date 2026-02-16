@@ -190,6 +190,65 @@ const createSatelliteIcon = (color: Color, size: number = 32): string => {
   return canvas.toDataURL();
 };
 
+// Generate a ground station icon as a data URI canvas
+const createGroundStationIcon = (size: number = 32): string => {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const cx = size / 2;
+
+  // Dish base
+  ctx.fillStyle = "rgba(0, 255, 255, 0.9)";
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, size - 4);
+  ctx.lineTo(cx + 6, size - 4);
+  ctx.lineTo(cx + 3, size - 8);
+  ctx.lineTo(cx - 3, size - 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Support pole
+  ctx.strokeStyle = "rgba(0, 255, 255, 0.9)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, size - 8);
+  ctx.lineTo(cx, size / 2 + 2);
+  ctx.stroke();
+
+  // Dish (parabolic arc)
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(cx, size / 2 - 2, 10, Math.PI * 0.15, Math.PI * 0.85, false);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(0, 255, 255, 0.25)";
+  ctx.beginPath();
+  ctx.arc(cx, size / 2 - 2, 10, Math.PI * 0.15, Math.PI * 0.85, false);
+  ctx.lineTo(cx, size / 2 + 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Signal waves
+  ctx.strokeStyle = "rgba(0, 255, 255, 0.5)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.arc(cx, 4, i * 3, Math.PI * 0.3, Math.PI * 0.7, false);
+    ctx.stroke();
+  }
+
+  // White glow
+  ctx.shadowColor = "cyan";
+  ctx.shadowBlur = 4;
+  ctx.fillStyle = "rgba(0, 255, 255, 0.8)";
+  ctx.beginPath();
+  ctx.arc(cx, size / 2 - 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  return canvas.toDataURL();
+};
+
 const defaultSatellites: SatelliteData[] = [
   { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
   { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
@@ -385,11 +444,10 @@ const CesiumScene = ({
           id: station.id,
           name: station.name,
           position: Cartesian3.fromDegrees(station.lon, station.lat, 0),
-          point: {
-            pixelSize: 12,
-            color: Color.CYAN,
-            outlineColor: Color.WHITE,
-            outlineWidth: 2,
+          billboard: {
+            image: createGroundStationIcon(36),
+            width: 28,
+            height: 28,
             heightReference: 1,
           },
           label: {
@@ -399,8 +457,11 @@ const CesiumScene = ({
             outlineColor: Color.BLACK,
             outlineWidth: 2,
             style: 2,
-            pixelOffset: { x: 0, y: -20 } as any,
+            pixelOffset: { x: 0, y: -22 } as any,
             heightReference: 1,
+            showBackground: true,
+            backgroundColor: Color.BLACK.withAlpha(0.6),
+            scale: 0.85,
           },
           description: `<div style="padding: 8px;"><h3>${station.name}</h3><p>ESA Ground Station</p><p>Lat: ${station.lat.toFixed(3)}°</p><p>Lon: ${station.lon.toFixed(3)}°</p></div>`,
         });
