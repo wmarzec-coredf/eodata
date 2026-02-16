@@ -13,6 +13,10 @@ import {
   ClockRange,
   ClockStep,
   IonImageryProvider,
+  Ellipsoid,
+  Cartographic,
+  CallbackProperty,
+  Event as CesiumEvent,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -109,6 +113,7 @@ const CesiumScene = ({
   showMEO,
   showGEO,
   showGroundStations,
+  showDataTransfer,
   showOrbits,
   showTrails,
   simulationSpeed,
@@ -351,7 +356,108 @@ const CesiumScene = ({
         `,
       });
     });
-  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails]);
+  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails, showDataTransfer]);
+
+  // Dynamic data transfer links - computed each tick
+  useEffect(() => {
+    if (!viewerRef.current || !isInitialized || !showDataTransfer || !showGroundStations) return;
+
+    const viewer = viewerRef.current;
+    const EARTH_RADIUS = 6371000; // meters
+    const MIN_ELEVATION_DEG = 5; // minimum elevation angle for line of sight
+    const linkEntities: any[] = [];
+
+    const onTick = () => {
+      // Remove previous link entities
+      linkEntities.forEach((e) => {
+        if (viewer.entities.contains(e)) viewer.entities.remove(e);
+      });
+      linkEntities.length = 0;
+
+      if (!showDataTransfer || !showGroundStations) return;
+
+      const currentTime = viewer.clock.currentTime;
+
+      // Get visible satellite entities and their current positions
+      const visibleSatellites = satellites.filter((sat) => {
+        if (sat.orbitType === "LEO") return showLEO;
+        if (sat.orbitType === "MEO") return showMEO;
+        if (sat.orbitType === "GEO") return showGEO;
+        return true;
+      });
+
+      visibleSatellites.forEach((sat) => {
+        const satEntity = viewer.entities.getById(sat.id);
+        if (!satEntity || !satEntity.position) return;
+
+        const satPosition = satEntity.position.getValue(currentTime);
+        if (!satPosition) return;
+
+        const satCartographic = Cartographic.fromCartesian(satPosition);
+        const satLat = satCartographic.latitude;
+        const satLon = satCartographic.longitude;
+        const satAlt = satCartographic.height;
+
+        groundStationsList.forEach((gs) => {
+          const gsLat = (gs.lat * Math.PI) / 180;
+          const gsLon = (gs.lon * Math.PI) / 180;
+
+          // Calculate elevation angle from ground station to satellite
+          const dLat = satLat - gsLat;
+          const dLon = satLon - gsLon;
+          const centralAngle = Math.acos(
+            Math.sin(gsLat) * Math.sin(satLat) +
+            Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon)
+          );
+
+          // Elevation angle calculation
+          const slantRange = Math.sqrt(
+            EARTH_RADIUS * EARTH_RADIUS +
+            (EARTH_RADIUS + satAlt) * (EARTH_RADIUS + satAlt) -
+            2 * EARTH_RADIUS * (EARTH_RADIUS + satAlt) * Math.cos(centralAngle)
+          );
+
+          const elevationAngle = Math.asin(
+            ((EARTH_RADIUS + satAlt) * Math.sin(centralAngle)) / slantRange
+          );
+          const elevationDeg = 90 - (elevationAngle * 180) / Math.PI;
+
+          // Check if satellite is above minimum elevation
+          if (elevationDeg >= MIN_ELEVATION_DEG) {
+            const gsPosition = Cartesian3.fromDegrees(gs.lon, gs.lat, 0);
+
+            // Determine link color based on orbit type
+            let linkColor = Color.CYAN.withAlpha(0.5);
+            if (sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.4);
+            if (sat.orbitType === "GEO") linkColor = Color.RED.withAlpha(0.4);
+
+            const entity = viewer.entities.add({
+              id: `link-${sat.id}-${gs.id}-${Date.now()}`,
+              polyline: {
+                positions: [gsPosition, satPosition],
+                width: 1.5,
+                material: new PolylineGlowMaterialProperty({
+                  glowPower: 0.3,
+                  color: linkColor,
+                }),
+              },
+            });
+            linkEntities.push(entity);
+          }
+        });
+      });
+    };
+
+    // Run on tick
+    viewer.clock.onTick.addEventListener(onTick);
+
+    return () => {
+      viewer.clock.onTick.removeEventListener(onTick);
+      linkEntities.forEach((e) => {
+        if (viewer.entities.contains(e)) viewer.entities.remove(e);
+      });
+    };
+  }, [isInitialized, showDataTransfer, showGroundStations, showLEO, showMEO, showGEO]);
 
   return (
     <div
