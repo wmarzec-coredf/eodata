@@ -10,8 +10,6 @@ import {
   Globe,
   Radio,
   Activity,
-  Map,
-  Globe2,
   Gauge,
   Play,
   Pause,
@@ -23,7 +21,6 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import PassPrediction from "@/components/visualization/PassPrediction";
@@ -58,10 +55,8 @@ const Visualization = () => {
   const [showOrbits, setShowOrbits] = useState(true);
   const [showGroundLinks, setShowGroundLinks] = useState(true);
   const [useTLEData, setUseTLEData] = useState(true);
-  const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
-  const [simulationTime, setSimulationTime] = useState(0);
   const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -99,16 +94,6 @@ const Visualization = () => {
     else document.exitFullscreen();
   }, []);
 
-  const handleTimeChange = useCallback((time: number) => {
-    setSimulationTime(time);
-    setIsPaused(true);
-  }, []);
-
-  const handleTimeReset = useCallback(() => setSimulationTime(0), []);
-
-  const handleTimeUpdate = useCallback((delta: number) => {
-    setSimulationTime((t) => t + delta);
-  }, []);
 
   const handleSatelliteClick = useCallback((satellite: SatelliteInfo) => {
     setSelectedSatellite(satellite);
@@ -142,27 +127,6 @@ const Visualization = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View mode toggle */}
-            <div className="flex items-center bg-secondary rounded-lg p-1">
-              <Button
-                variant={viewMode === "3d" ? "default" : "ghost"}
-                size="sm"
-                className="gap-1.5 h-7 px-3"
-                onClick={() => setViewMode("3d")}
-              >
-                <Globe2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Cesium 3D</span>
-              </Button>
-              <Button
-                variant={viewMode === "2d" ? "default" : "ghost"}
-                size="sm"
-                className="gap-1.5 h-7 px-3"
-                onClick={() => setViewMode("2d")}
-              >
-                <Map className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">2D Map</span>
-              </Button>
-            </div>
 
             <SatelliteSearch
               onSelectSatellite={handleSatelliteClick}
@@ -192,15 +156,10 @@ const Visualization = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar controls */}
         <aside className="w-72 border-r border-border bg-card/50 p-4 flex flex-col gap-6 hidden lg:flex overflow-y-auto flex-shrink-0">
-          {/* View mode info */}
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-            <p className="text-xs font-medium text-primary">
-              {viewMode === "3d" ? "Cesium 3D Globe View" : "2D Ground Track View"}
-            </p>
+            <p className="text-xs font-medium text-primary">Cesium Globe View</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {viewMode === "3d"
-                ? "Photorealistic 3D visualization powered by CesiumJS"
-                : "NASA-style ground track projection showing orbital paths"}
+              Photorealistic 3D visualization powered by CesiumJS. Use the scene mode picker to switch between 3D, 2D, and Columbus views.
             </p>
           </div>
 
@@ -251,8 +210,7 @@ const Visualization = () => {
               <Switch checked={showGroundStations} onCheckedChange={setShowGroundStations} />
             </div>
 
-            {viewMode === "3d" && (
-              <>
+
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-accent" />
@@ -286,9 +244,6 @@ const Visualization = () => {
                   <Switch checked={showOrbits} onCheckedChange={setShowOrbits} />
                 </div>
 
-
-
-
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
                     <Database className="h-4 w-4 text-accent" />
@@ -299,12 +254,10 @@ const Visualization = () => {
                   </div>
                   <Switch checked={useTLEData} onCheckedChange={setUseTLEData} />
                 </div>
-              </>
-            )}
           </div>
 
           {/* Pass Prediction */}
-          {viewMode === "3d" && useTLEData && (
+          {useTLEData && (
             <div className="space-y-4">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
@@ -372,12 +325,8 @@ const Visualization = () => {
               <p>• <kbd className="px-1 py-0.5 bg-secondary rounded text-[10px]">Space</kbd> Pause/Play</p>
               <p>• <kbd className="px-1 py-0.5 bg-secondary rounded text-[10px]">1-4</kbd> Change speed</p>
               <p>• <kbd className="px-1 py-0.5 bg-secondary rounded text-[10px]">F</kbd> Toggle fullscreen</p>
-              {viewMode === "3d" && (
-                <>
-                  <p>• Click + drag to rotate</p>
-                  <p>• Scroll to zoom</p>
-                </>
-              )}
+              <p>• Click + drag to rotate</p>
+              <p>• Scroll to zoom</p>
             </div>
           </div>
         </aside>
@@ -385,7 +334,6 @@ const Visualization = () => {
         {/* Viewer */}
         <main className="flex-1 relative">
           <div className="absolute inset-0">
-            {viewMode === "3d" ? (
               <Suspense
                 fallback={
                   <div className="absolute inset-0 flex items-center justify-center bg-background">
@@ -409,23 +357,7 @@ const Visualization = () => {
                   onSatelliteClick={handleSatelliteClick}
                 />
               </Suspense>
-            ) : (
-              <GroundTrackMap
-                showLEO={showLEO}
-                showMEO={showMEO}
-                showGEO={showGEO}
-                showGroundStations={showGroundStations}
-                simulationSpeed={simulationSpeed}
-                isPaused={isPaused}
-                simulationTime={simulationTime}
-                onTimeUpdate={handleTimeUpdate}
-                onSatelliteClick={handleSatelliteClick}
-              />
-            )}
           </div>
-
-
-
 
           {/* Satellite info popup */}
           {selectedSatellite && (
@@ -436,28 +368,18 @@ const Visualization = () => {
 
           {/* Mobile controls overlay */}
           <div className="absolute bottom-4 left-4 right-4 lg:hidden">
-            <div className="glass-card p-3 flex flex-col gap-3">
-              <div className="flex items-center justify-center gap-2">
-                <Button variant={viewMode === "3d" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setViewMode("3d")}>
-                  <Globe2 className="h-3.5 w-3.5" /> 3D
-                </Button>
-                <Button variant={viewMode === "2d" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setViewMode("2d")}>
-                  <Map className="h-3.5 w-3.5" /> 2D
-                </Button>
+            <div className="glass-card p-3 flex items-center justify-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="leo-mobile" className="text-xs">LEO</Label>
+                <Switch id="leo-mobile" checked={showLEO} onCheckedChange={setShowLEO} />
               </div>
-              <div className="flex items-center justify-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="leo-mobile" className="text-xs">LEO</Label>
-                  <Switch id="leo-mobile" checked={showLEO} onCheckedChange={setShowLEO} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="meo-mobile" className="text-xs">MEO</Label>
-                  <Switch id="meo-mobile" checked={showMEO} onCheckedChange={setShowMEO} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="geo-mobile" className="text-xs">GEO</Label>
-                  <Switch id="geo-mobile" checked={showGEO} onCheckedChange={setShowGEO} />
-                </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="meo-mobile" className="text-xs">MEO</Label>
+                <Switch id="meo-mobile" checked={showMEO} onCheckedChange={setShowMEO} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="geo-mobile" className="text-xs">GEO</Label>
+                <Switch id="geo-mobile" checked={showGEO} onCheckedChange={setShowGEO} />
               </div>
             </div>
           </div>
