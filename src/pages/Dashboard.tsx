@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ExperimentCard from "@/components/dashboard/ExperimentCard";
 import StatsCard from "@/components/dashboard/StatsCard";
+import Footer from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,9 +14,7 @@ import {
   Search,
   Plus,
   Filter,
-  Globe,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 // Mock data - will be replaced with real API calls
 const mockExperiments = [
@@ -59,14 +58,7 @@ const mockExperiments = [
 
 const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { toast } = useToast();
-
-  const handleViewExperiment = (id: string) => {
-    toast({
-      title: "Opening Experiment",
-      description: `Loading visualization for ${id}...`,
-    });
-  };
+  const navigate = useNavigate();
 
   const filteredExperiments = mockExperiments.filter(
     (exp) =>
@@ -145,7 +137,7 @@ const Dashboard = () => {
               <ExperimentCard
                 key={experiment.id}
                 {...experiment}
-                onView={() => handleViewExperiment(experiment.id)}
+                onView={() => navigate("/visualization")}
               />
             ))}
           </div>
@@ -159,35 +151,9 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Link to="/visualization">
-              <Button variant="outline" className="w-full h-auto py-4 flex-col gap-2 border-primary/50 hover:bg-primary/10">
-                <Globe className="h-5 w-5 text-primary" />
-                <span className="text-sm">3D Visualization</span>
-              </Button>
-            </Link>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Satellite className="h-5 w-5" />
-              <span className="text-sm">Add Satellite</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Database className="h-5 w-5" />
-              <span className="text-sm">Import Data</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Activity className="h-5 w-5" />
-              <span className="text-sm">Run Analysis</span>
-            </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Clock className="h-5 w-5" />
-              <span className="text-sm">Schedule Task</span>
-            </Button>
-          </div>
-        </div>
       </main>
+
+      <Footer />
     </div>
   );
 };
