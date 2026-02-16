@@ -1,4 +1,4 @@
-import { X, Satellite, MapPin, Clock, Gauge } from "lucide-react";
+import { X, Satellite, MapPin, Clock, Gauge, Radio, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface SatelliteInfo {
@@ -12,6 +12,8 @@ export interface SatelliteInfo {
   lon?: number;
   speed?: number;
   period?: number;
+  connectedSatellites?: string[];
+  connectedStations?: string[];
 }
 
 interface SatelliteInfoPopupProps {
@@ -105,6 +107,38 @@ const SatelliteInfoPopup = ({ satellite, onClose, position }: SatelliteInfoPopup
                 {satellite.lat.toFixed(2)}°{satellite.lat >= 0 ? "N" : "S"},{" "}
                 {satellite.lon.toFixed(2)}°{satellite.lon >= 0 ? "E" : "W"}
               </p>
+            </div>
+          </div>
+        )}
+
+        {satellite.connectedSatellites && satellite.connectedSatellites.length > 0 && (
+          <div className="p-2 rounded bg-secondary/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Link2 className="h-3.5 w-3.5 text-fuchsia-400" />
+              <p className="text-xs text-muted-foreground">Inter-Satellite Links</p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {satellite.connectedSatellites.map((name) => (
+                <span key={name} className="text-xs font-medium px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300">
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {satellite.connectedStations && satellite.connectedStations.length > 0 && (
+          <div className="p-2 rounded bg-secondary/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Radio className="h-3.5 w-3.5 text-cyan-400" />
+              <p className="text-xs text-muted-foreground">Ground Station Links</p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {satellite.connectedStations.map((name) => (
+                <span key={name} className="text-xs font-medium px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                  {name}
+                </span>
+              ))}
             </div>
           </div>
         )}
