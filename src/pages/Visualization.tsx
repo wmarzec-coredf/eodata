@@ -191,9 +191,9 @@ const Visualization = () => {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         {/* Sidebar controls */}
-        <aside className="w-72 border-r border-border bg-card/50 p-4 flex flex-col gap-6 hidden lg:flex overflow-y-auto">
+        <aside className="w-72 border-r border-border bg-card/50 p-4 flex flex-col gap-6 hidden lg:flex overflow-y-auto flex-shrink-0">
           {/* View mode info */}
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
             <p className="text-xs font-medium text-primary">
