@@ -350,6 +350,7 @@ const Visualization = () => {
                   showGEO={showGEO}
                   showGroundStations={showGroundStations}
                   showDataTransfer={showDataTransfer}
+                  showGroundLinks={showGroundLinks}
                   showOrbits={showOrbits}
                   showTrails={false}
                   simulationSpeed={simulationSpeed}
