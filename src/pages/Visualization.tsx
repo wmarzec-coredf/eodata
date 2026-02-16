@@ -196,7 +196,7 @@ const Visualization = () => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
-              Ground Infrastructure
+              Infrastructure
             </h3>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
