@@ -373,7 +373,7 @@ const CesiumScene = ({
     const linkEntities: any[] = [];
 
     let lastUpdateTime = 0;
-    const UPDATE_INTERVAL_MS = 2000;
+    const UPDATE_INTERVAL_MS = 500;
 
     const getDistance = (pos1: Cartesian3, pos2: Cartesian3): number => {
       const dx = pos1.x - pos2.x;
