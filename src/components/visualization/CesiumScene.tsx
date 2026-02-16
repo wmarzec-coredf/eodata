@@ -438,11 +438,11 @@ const CesiumScene = ({
               id: `isl-${pairKey}-${now}`,
               polyline: {
                 positions: [posA, posB],
-                width: 2,
+                width: 3,
                 material: new PolylineDashMaterialProperty({
-                  color: Color.fromCssColorString("#00ffaa").withAlpha(0.7),
+                  color: Color.fromCssColorString("#ff44ff").withAlpha(0.8),
                   gapColor: Color.TRANSPARENT,
-                  dashLength: 16,
+                  dashLength: 24,
                   dashPattern: 255,
                 }),
               },
