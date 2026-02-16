@@ -17,6 +17,9 @@ import {
   Ellipsoid,
   Cartographic,
   CallbackProperty,
+  VelocityVectorProperty,
+  Transforms,
+  Matrix4,
   Event as CesiumEvent,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
@@ -495,6 +498,22 @@ const CesiumScene = ({
 
       // Satellite entity
       const position = createOrbitPath(sat.altitude, sat.inclination, sat.startAngle, startTime, 86400);
+      const velocityVector = new VelocityVectorProperty(position, false);
+
+      // Compute 2D rotation from velocity projected to local ENU frame
+      const rotationCallback = new CallbackProperty((time) => {
+        const pos = position.getValue(time);
+        const vel = velocityVector.getValue(time);
+        if (!pos || !vel) return 0;
+
+        // Transform velocity to local East-North-Up frame
+        const transform = Transforms.eastNorthUpToFixedFrame(pos);
+        const inverseTransform = Matrix4.inverse(transform, new Matrix4());
+        const localVel = Matrix4.multiplyByPointAsVector(inverseTransform, vel, new Cartesian3());
+
+        // Angle from East axis (atan2 of north/east), negated for billboard CW rotation
+        return -Math.atan2(localVel.x, localVel.y);
+      }, false);
 
       viewer.entities.add({
         id: sat.id,
@@ -504,6 +523,7 @@ const CesiumScene = ({
           image: createSatelliteIcon(sat.color, sat.orbitType === "GEO" ? 40 : sat.orbitType === "MEO" ? 36 : 32),
           width: sat.orbitType === "GEO" ? 28 : sat.orbitType === "MEO" ? 24 : 20,
           height: sat.orbitType === "GEO" ? 28 : sat.orbitType === "MEO" ? 24 : 20,
+          rotation: rotationCallback as any,
         },
         label: {
           text: sat.name,
