@@ -226,7 +226,7 @@ const CesiumScene = ({
       const picked = viewer.scene.pick(click.position);
       if (defined(picked) && picked.id && picked.id.id) {
         const entityId = picked.id.id as string;
-        if (entityId.startsWith("orbit-") || entityId.startsWith("gs")) return;
+        if (entityId.startsWith("orbit-") || entityId.startsWith("gs") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) return;
         const sat = satellites.find((s) => s.id === entityId);
         if (sat) {
           const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
