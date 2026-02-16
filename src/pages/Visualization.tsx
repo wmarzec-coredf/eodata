@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import GroundStationInfoPopup, { GroundStationInfo } from "@/components/visualiz
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import PassPrediction from "@/components/visualization/PassPrediction";
 import esaLogo from "@/assets/esa-logo.svg";
+import { getExperimentConfig } from "@/lib/experiment-configs";
 
 // Lazy load CesiumScene
 const CesiumScene = lazy(() => import("@/components/visualization/CesiumScene"));
@@ -47,6 +48,8 @@ const SPEED_OPTIONS = [
 ];
 
 const Visualization = () => {
+  const { experimentId } = useParams<{ experimentId: string }>();
+  const experimentConfig = useMemo(() => getExperimentConfig(experimentId), [experimentId]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showLEO, setShowLEO] = useState(true);
   const [showMEO, setShowMEO] = useState(true);
@@ -112,10 +115,14 @@ const Visualization = () => {
     setSelectedStation(null);
   }, []);
 
+  const leoCount = experimentConfig.satellites.filter(s => s.orbitType === "LEO").length;
+  const meoCount = experimentConfig.satellites.filter(s => s.orbitType === "MEO").length;
+  const geoCount = experimentConfig.satellites.filter(s => s.orbitType === "GEO").length;
+
   const orbitStats = [
-    { name: "LEO", color: "#4ade80", altitude: "200-2,000 km", satellites: 8, active: showLEO },
-    { name: "MEO", color: "#facc15", altitude: "2,000-35,786 km", satellites: 4, active: showMEO },
-    { name: "GEO", color: "#f97316", altitude: "35,786 km", satellites: 3, active: showGEO },
+    { name: "LEO", color: "#4ade80", altitude: "200-2,000 km", satellites: leoCount, active: showLEO },
+    { name: "MEO", color: "#facc15", altitude: "2,000-35,786 km", satellites: meoCount, active: showMEO },
+    { name: "GEO", color: "#f97316", altitude: "35,786 km", satellites: geoCount, active: showGEO },
   ];
 
   return (
@@ -133,7 +140,7 @@ const Visualization = () => {
             <div className="h-6 w-px bg-border" />
             <img src={esaLogo} alt="ESA" className="h-6 w-auto" />
             <span className="text-sm font-medium hidden md:block">
-              Satellite Constellation Viewer
+              {experimentConfig.name}
             </span>
           </div>
 
@@ -215,7 +222,7 @@ const Visualization = () => {
                 <Radio className="h-4 w-4 text-accent" />
                 <div>
                   <p className="text-sm font-medium">Ground Stations</p>
-                  <p className="text-xs text-muted-foreground">6 ESA stations</p>
+                  <p className="text-xs text-muted-foreground">{experimentConfig.groundStations.length} ESA stations</p>
                 </div>
               </div>
               <Switch checked={showGroundStations} onCheckedChange={setShowGroundStations} />
@@ -283,11 +290,11 @@ const Visualization = () => {
             <h3 className="text-sm font-semibold">Network Statistics</h3>
             <div className="grid grid-cols-2 gap-2">
               <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                <p className="text-2xl font-bold text-primary">15</p>
+                <p className="text-2xl font-bold text-primary">{experimentConfig.satellites.length}</p>
                 <p className="text-xs text-muted-foreground">Total Satellites</p>
               </div>
               <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                <p className="text-2xl font-bold text-accent">6</p>
+                <p className="text-2xl font-bold text-accent">{experimentConfig.groundStations.length}</p>
                 <p className="text-xs text-muted-foreground">Ground Stations</p>
               </div>
               <div className="p-3 rounded-lg bg-secondary/50 text-center">
@@ -366,6 +373,8 @@ const Visualization = () => {
                   showTrails={false}
                   simulationSpeed={simulationSpeed}
                   isPaused={isPaused}
+                  satellites={experimentConfig.satellites}
+                  groundStationsList={experimentConfig.groundStations}
                   onSatelliteClick={handleSatelliteClick}
                   onGroundStationClick={handleGroundStationClick}
                 />

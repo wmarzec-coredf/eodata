@@ -54,6 +54,8 @@ interface CesiumSceneProps {
   showTrails: boolean;
   simulationSpeed: number;
   isPaused: boolean;
+  satellites?: SatelliteData[];
+  groundStationsList?: GroundStationData[];
   onSatelliteClick?: (satellite: SatelliteClickInfo) => void;
   onGroundStationClick?: (station: GroundStationClickInfo) => void;
 }
@@ -121,6 +123,33 @@ const generateOrbitPoints = (altitude: number, inclination: number, numPoints: n
   return points;
 };
 
+const defaultSatellites: SatelliteData[] = [
+  { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
+  { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
+  { id: "leo3", name: "Sentinel-3A", orbitType: "LEO", altitude: 814, inclination: 98.65, color: Color.LIME, startAngle: Math.PI },
+  { id: "leo4", name: "CryoSat-2", orbitType: "LEO", altitude: 717, inclination: 92, color: Color.LIME, startAngle: Math.PI * 1.5 },
+  { id: "leo5", name: "SMOS", orbitType: "LEO", altitude: 758, inclination: 98.44, color: Color.LIME, startAngle: Math.PI * 0.25 },
+  { id: "leo6", name: "Aeolus", orbitType: "LEO", altitude: 320, inclination: 97, color: Color.LIME, startAngle: Math.PI * 0.75 },
+  { id: "leo7", name: "GOCE", orbitType: "LEO", altitude: 260, inclination: 96.5, color: Color.LIME, startAngle: Math.PI * 1.25 },
+  { id: "leo8", name: "Swarm-A", orbitType: "LEO", altitude: 462, inclination: 87.35, color: Color.LIME, startAngle: Math.PI * 1.75 },
+  { id: "meo1", name: "Galileo-1", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: 0 },
+  { id: "meo2", name: "Galileo-2", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI / 2 },
+  { id: "meo3", name: "Galileo-3", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI },
+  { id: "meo4", name: "Galileo-4", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI * 1.5 },
+  { id: "geo1", name: "Meteosat-11", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: 0 },
+  { id: "geo2", name: "Meteosat-10", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: Math.PI * 0.66 },
+  { id: "geo3", name: "MSG-4", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: Math.PI * 1.33 },
+];
+
+const defaultGroundStations: GroundStationData[] = [
+  { id: "gs1", name: "Kiruna", lat: 67.857, lon: 20.964 },
+  { id: "gs2", name: "Redu", lat: 50.002, lon: 5.146 },
+  { id: "gs3", name: "Cebreros", lat: 40.453, lon: -4.368 },
+  { id: "gs4", name: "Maspalomas", lat: 27.763, lon: -15.633 },
+  { id: "gs5", name: "Kourou", lat: 5.252, lon: -52.786 },
+  { id: "gs6", name: "New Norcia", lat: -31.048, lon: 116.192 },
+];
+
 const CesiumScene = ({
   showLEO,
   showMEO,
@@ -132,6 +161,8 @@ const CesiumScene = ({
   showTrails,
   simulationSpeed,
   isPaused,
+  satellites: satellitesProp,
+  groundStationsList: groundStationsProp,
   onSatelliteClick,
   onGroundStationClick,
 }: CesiumSceneProps) => {
@@ -140,32 +171,8 @@ const CesiumScene = ({
   const connectionsRef = useRef<{ satLinks: Record<string, string[]>; gsLinks: Record<string, string[]>; stationToSat: Record<string, string> }>({ satLinks: {}, gsLinks: {}, stationToSat: {} });
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const satellites: SatelliteData[] = [
-    { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
-    { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
-    { id: "leo3", name: "Sentinel-3A", orbitType: "LEO", altitude: 814, inclination: 98.65, color: Color.LIME, startAngle: Math.PI },
-    { id: "leo4", name: "CryoSat-2", orbitType: "LEO", altitude: 717, inclination: 92, color: Color.LIME, startAngle: Math.PI * 1.5 },
-    { id: "leo5", name: "SMOS", orbitType: "LEO", altitude: 758, inclination: 98.44, color: Color.LIME, startAngle: Math.PI * 0.25 },
-    { id: "leo6", name: "Aeolus", orbitType: "LEO", altitude: 320, inclination: 97, color: Color.LIME, startAngle: Math.PI * 0.75 },
-    { id: "leo7", name: "GOCE", orbitType: "LEO", altitude: 260, inclination: 96.5, color: Color.LIME, startAngle: Math.PI * 1.25 },
-    { id: "leo8", name: "Swarm-A", orbitType: "LEO", altitude: 462, inclination: 87.35, color: Color.LIME, startAngle: Math.PI * 1.75 },
-    { id: "meo1", name: "Galileo-1", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: 0 },
-    { id: "meo2", name: "Galileo-2", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI / 2 },
-    { id: "meo3", name: "Galileo-3", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI },
-    { id: "meo4", name: "Galileo-4", orbitType: "MEO", altitude: 23222, inclination: 56, color: Color.YELLOW, startAngle: Math.PI * 1.5 },
-    { id: "geo1", name: "Meteosat-11", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: 0 },
-    { id: "geo2", name: "Meteosat-10", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: Math.PI * 0.66 },
-    { id: "geo3", name: "MSG-4", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: Math.PI * 1.33 },
-  ];
-
-  const groundStationsList: GroundStationData[] = [
-    { id: "gs1", name: "Kiruna", lat: 67.857, lon: 20.964 },
-    { id: "gs2", name: "Redu", lat: 50.002, lon: 5.146 },
-    { id: "gs3", name: "Cebreros", lat: 40.453, lon: -4.368 },
-    { id: "gs4", name: "Maspalomas", lat: 27.763, lon: -15.633 },
-    { id: "gs5", name: "Kourou", lat: 5.252, lon: -52.786 },
-    { id: "gs6", name: "New Norcia", lat: -31.048, lon: 116.192 },
-  ];
+  const satellites = satellitesProp || defaultSatellites;
+  const groundStationsList = groundStationsProp || defaultGroundStations;
 
   // Initialize Cesium viewer
   useEffect(() => {
