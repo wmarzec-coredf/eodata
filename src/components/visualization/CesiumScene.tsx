@@ -453,10 +453,12 @@ const CesiumScene = ({
     viewer.clock.onTick.addEventListener(onTick);
 
     return () => {
-      viewer.clock.onTick.removeEventListener(onTick);
-      linkEntities.forEach((e) => {
-        if (viewer.entities.contains(e)) viewer.entities.remove(e);
-      });
+      if (!viewer.isDestroyed()) {
+        viewer.clock.onTick.removeEventListener(onTick);
+        linkEntities.forEach((e) => {
+          if (viewer.entities.contains(e)) viewer.entities.remove(e);
+        });
+      }
     };
   }, [isInitialized, showDataTransfer, showGroundStations, showLEO, showMEO, showGEO]);
 
