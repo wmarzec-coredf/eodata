@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Satellite,
@@ -24,8 +23,8 @@ import {
   Link2,
   Database,
   Clock,
+  Loader2,
 } from "lucide-react";
-import Scene, { groundStations } from "@/components/visualization/Scene";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
 import TimeSlider from "@/components/visualization/TimeSlider";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
@@ -33,6 +32,18 @@ import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import SimulationClock from "@/components/visualization/SimulationClock";
 import PassPrediction from "@/components/visualization/PassPrediction";
 import esaLogo from "@/assets/esa-logo.svg";
+
+// Lazy load CesiumScene
+const CesiumScene = lazy(() => import("@/components/visualization/CesiumScene"));
+
+const groundStations = [
+  { name: "Darmstadt (ESOC)", lat: 49.87, lng: 8.63 },
+  { name: "Kourou", lat: 5.16, lng: -52.65 },
+  { name: "Perth", lat: -31.95, lng: 115.86 },
+  { name: "Kiruna", lat: 67.86, lng: 20.22 },
+  { name: "Maspalomas", lat: 27.76, lng: -15.58 },
+  { name: "Redu", lat: 50.0, lng: 5.15 },
+];
 
 const SPEED_OPTIONS = [
   { label: "1x", value: 1, key: "1" },
@@ -60,70 +71,47 @@ const Visualization = () => {
   const [simulationTime, setSimulationTime] = useState(0);
   const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   const baseTime = useMemo(() => new Date(), []);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       switch (e.key) {
-        case " ": // Spacebar for pause/play
+        case " ":
           e.preventDefault();
           setIsPaused((prev) => !prev);
           break;
-        case "1":
-          setSimulationSpeed(SPEED_OPTIONS[0].value);
-          break;
-        case "2":
-          setSimulationSpeed(SPEED_OPTIONS[1].value);
-          break;
-        case "3":
-          setSimulationSpeed(SPEED_OPTIONS[2].value);
-          break;
-        case "4":
-          setSimulationSpeed(SPEED_OPTIONS[3].value);
-          break;
+        case "1": setSimulationSpeed(SPEED_OPTIONS[0].value); break;
+        case "2": setSimulationSpeed(SPEED_OPTIONS[1].value); break;
+        case "3": setSimulationSpeed(SPEED_OPTIONS[2].value); break;
+        case "4": setSimulationSpeed(SPEED_OPTIONS[3].value); break;
         case "f":
-        case "F":
-          toggleFullscreen();
-          break;
+        case "F": toggleFullscreen(); break;
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fullscreen change detection
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  }, []);
-  const handleTimeChange = useCallback((time: number) => {
-    setSimulationTime(time);
-    setIsPaused(true); // Pause when scrubbing
+    if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
+    else document.exitFullscreen();
   }, []);
 
-  const handleTimeReset = useCallback(() => {
-    setSimulationTime(0);
+  const handleTimeChange = useCallback((time: number) => {
+    setSimulationTime(time);
+    setIsPaused(true);
   }, []);
+
+  const handleTimeReset = useCallback(() => setSimulationTime(0), []);
 
   const handleTimeUpdate = useCallback((delta: number) => {
     setSimulationTime((t) => t + delta);
@@ -133,9 +121,7 @@ const Visualization = () => {
     setSelectedSatellite(satellite);
   }, []);
 
-  const handleClosePopup = useCallback(() => {
-    setSelectedSatellite(null);
-  }, []);
+  const handleClosePopup = useCallback(() => setSelectedSatellite(null), []);
 
   const orbitStats = [
     { name: "LEO", color: "#4ade80", altitude: "200-2,000 km", satellites: 8, active: showLEO },
@@ -172,7 +158,7 @@ const Visualization = () => {
                 onClick={() => setViewMode("3d")}
               >
                 <Globe2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">3D Globe</span>
+                <span className="hidden sm:inline">Cesium 3D</span>
               </Button>
               <Button
                 variant={viewMode === "2d" ? "default" : "ghost"}
@@ -184,30 +170,21 @@ const Visualization = () => {
                 <span className="hidden sm:inline">2D Map</span>
               </Button>
             </div>
-            
+
             <SatelliteSearch
               onSelectSatellite={handleSatelliteClick}
               showLEO={showLEO}
               showMEO={showMEO}
               showGEO={showGEO}
             />
-            
-            <Link to="/visualization-cesium">
-              <Button variant="outline" size="sm">
-                Cesium View
-              </Button>
-            </Link>
+
             <Button
               variant="outline"
               size="sm"
               className="gap-1.5"
               onClick={toggleFullscreen}
             >
-              {isFullscreen ? (
-                <Minimize className="h-3.5 w-3.5" />
-              ) : (
-                <Maximize className="h-3.5 w-3.5" />
-              )}
+              {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">{isFullscreen ? "Exit" : "Fullscreen"}</span>
             </Button>
             <Badge variant="outline" className="gap-1.5 bg-esa-success/20 text-esa-success border-esa-success/30">
@@ -221,17 +198,16 @@ const Visualization = () => {
       {/* Main content */}
       <div className="flex-1 flex">
         {/* Sidebar controls */}
-        <aside className="w-72 border-r border-border bg-card/50 p-4 flex flex-col gap-6 hidden lg:flex">
+        <aside className="w-72 border-r border-border bg-card/50 p-4 flex flex-col gap-6 hidden lg:flex overflow-y-auto">
           {/* View mode info */}
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
             <p className="text-xs font-medium text-primary">
-              {viewMode === "3d" ? "3D Globe View" : "2D Ground Track View"}
+              {viewMode === "3d" ? "Cesium 3D Globe View" : "2D Ground Track View"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {viewMode === "3d" 
-                ? "Interactive 3D visualization of satellite orbits"
-                : "NASA-style ground track projection showing orbital paths"
-              }
+              {viewMode === "3d"
+                ? "Photorealistic 3D visualization powered by CesiumJS"
+                : "NASA-style ground track projection showing orbital paths"}
             </p>
           </div>
 
@@ -241,31 +217,18 @@ const Visualization = () => {
               <Satellite className="h-4 w-4 text-primary" />
               Orbital Layers
             </h3>
-
             <div className="space-y-3">
               {orbitStats.map((orbit) => (
-                <div
-                  key={orbit.name}
-                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
-                >
+                <div key={orbit.name} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: orbit.color }}
-                    />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: orbit.color }} />
                     <div>
                       <p className="text-sm font-medium">{orbit.name}</p>
                       <p className="text-xs text-muted-foreground">{orbit.altitude}</p>
                     </div>
                   </div>
                   <Switch
-                    checked={
-                      orbit.name === "LEO"
-                        ? showLEO
-                        : orbit.name === "MEO"
-                        ? showMEO
-                        : showGEO
-                    }
+                    checked={orbit.name === "LEO" ? showLEO : orbit.name === "MEO" ? showMEO : showGEO}
                     onCheckedChange={(checked) => {
                       if (orbit.name === "LEO") setShowLEO(checked);
                       else if (orbit.name === "MEO") setShowMEO(checked);
@@ -277,7 +240,7 @@ const Visualization = () => {
             </div>
           </div>
 
-          {/* Ground stations toggle */}
+          {/* Ground Infrastructure */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
@@ -296,94 +259,84 @@ const Visualization = () => {
             </div>
 
             {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Activity className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Data Transfer</p>
-                    <p className="text-xs text-muted-foreground">Inter-satellite links</p>
+              <>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Data Transfer</p>
+                      <p className="text-xs text-muted-foreground">Inter-satellite links</p>
+                    </div>
                   </div>
+                  <Switch checked={showDataTransfer} onCheckedChange={setShowDataTransfer} />
                 </div>
-                <Switch checked={showDataTransfer} onCheckedChange={setShowDataTransfer} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Link2 className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Ground Links</p>
-                    <p className="text-xs text-muted-foreground">Station to satellite</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Link2 className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Ground Links</p>
+                      <p className="text-xs text-muted-foreground">Station to satellite</p>
+                    </div>
                   </div>
+                  <Switch checked={showGroundLinks} onCheckedChange={setShowGroundLinks} />
                 </div>
-                <Switch checked={showGroundLinks} onCheckedChange={setShowGroundLinks} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Circle className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Orbit Lines</p>
-                    <p className="text-xs text-muted-foreground">Show orbit paths</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Circle className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Orbit Lines</p>
+                      <p className="text-xs text-muted-foreground">Show orbit paths</p>
+                    </div>
                   </div>
+                  <Switch checked={showOrbits} onCheckedChange={setShowOrbits} />
                 </div>
-                <Switch checked={showOrbits} onCheckedChange={setShowOrbits} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Satellite Trails</p>
-                    <p className="text-xs text-muted-foreground">Show recent paths</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Satellite Trails</p>
+                      <p className="text-xs text-muted-foreground">Show recent paths</p>
+                    </div>
                   </div>
+                  <Switch checked={showTrails} onCheckedChange={setShowTrails} />
                 </div>
-                <Switch checked={showTrails} onCheckedChange={setShowTrails} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Sun className="h-4 w-4 text-yellow-500" />
-                  <div>
-                    <p className="text-sm font-medium">Sun</p>
-                    <p className="text-xs text-muted-foreground">Day/night cycle</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Sun className="h-4 w-4 text-yellow-500" />
+                    <div>
+                      <p className="text-sm font-medium">Sun</p>
+                      <p className="text-xs text-muted-foreground">Day/night cycle</p>
+                    </div>
                   </div>
+                  <Switch checked={showSun} onCheckedChange={setShowSun} />
                 </div>
-                <Switch checked={showSun} onCheckedChange={setShowSun} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Satellite Glow</p>
-                    <p className="text-xs text-muted-foreground">Point lights on satellites</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Satellite Glow</p>
+                      <p className="text-xs text-muted-foreground">Point lights on satellites</p>
+                    </div>
                   </div>
+                  <Switch checked={showSatelliteGlow} onCheckedChange={setShowSatelliteGlow} />
                 </div>
-                <Switch checked={showSatelliteGlow} onCheckedChange={setShowSatelliteGlow} />
-              </div>
-            )}
 
-            {viewMode === "3d" && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Database className="h-4 w-4 text-accent" />
-                  <div>
-                    <p className="text-sm font-medium">Real TLE Data</p>
-                    <p className="text-xs text-muted-foreground">Use satellite.js</p>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <Database className="h-4 w-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium">Real TLE Data</p>
+                      <p className="text-xs text-muted-foreground">Use satellite.js</p>
+                    </div>
                   </div>
+                  <Switch checked={useTLEData} onCheckedChange={setUseTLEData} />
                 </div>
-                <Switch checked={useTLEData} onCheckedChange={setUseTLEData} />
-              </div>
+              </>
             )}
           </div>
 
@@ -428,17 +381,8 @@ const Visualization = () => {
               Simulation Speed
             </h3>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-9 p-0"
-                onClick={() => setIsPaused(!isPaused)}
-              >
-                {isPaused ? (
-                  <Play className="h-4 w-4" />
-                ) : (
-                  <Pause className="h-4 w-4" />
-                )}
+              <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setIsPaused(!isPaused)}>
+                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </Button>
               <div className="flex flex-wrap gap-1 flex-1">
                 {SPEED_OPTIONS.map((option) => (
@@ -455,12 +399,10 @@ const Visualization = () => {
                 ))}
               </div>
             </div>
-            {isPaused && (
-              <p className="text-xs text-esa-warning">Simulation paused</p>
-            )}
+            {isPaused && <p className="text-xs text-esa-warning">Simulation paused</p>}
           </div>
 
-          {/* Legend */}
+          {/* Keyboard Shortcuts */}
           <div className="mt-auto space-y-2">
             <h3 className="text-sm font-semibold">Keyboard Shortcuts</h3>
             <div className="text-xs text-muted-foreground space-y-1">
@@ -481,25 +423,28 @@ const Visualization = () => {
         <main className="flex-1 relative">
           <div className="absolute inset-0">
             {viewMode === "3d" ? (
-              <Scene
-                showLEO={showLEO}
-                showMEO={showMEO}
-                showGEO={showGEO}
-                showGroundStations={showGroundStations}
-                showDataTransfer={showDataTransfer}
-                showGroundLinks={showGroundLinks}
-                showTrails={showTrails}
-                showOrbits={showOrbits}
-                showSun={showSun}
-                showSatelliteGlow={showSatelliteGlow}
-                useTLEData={useTLEData}
-                simulationSpeed={simulationSpeed}
-                isPaused={isPaused}
-                simulationTime={simulationTime}
-                onTimeUpdate={handleTimeUpdate}
-                onSatelliteClick={handleSatelliteClick}
-                selectedSatelliteId={selectedSatellite?.id}
-              />
+              <Suspense
+                fallback={
+                  <div className="absolute inset-0 flex items-center justify-center bg-background">
+                    <div className="flex flex-col items-center gap-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-muted-foreground">Loading CesiumJS...</p>
+                    </div>
+                  </div>
+                }
+              >
+                <CesiumScene
+                  showLEO={showLEO}
+                  showMEO={showMEO}
+                  showGEO={showGEO}
+                  showGroundStations={showGroundStations}
+                  showDataTransfer={showDataTransfer}
+                  showOrbits={showOrbits}
+                  showTrails={showTrails}
+                  simulationSpeed={simulationSpeed}
+                  isPaused={isPaused}
+                />
+              </Suspense>
             ) : (
               <GroundTrackMap
                 showLEO={showLEO}
@@ -517,57 +462,32 @@ const Visualization = () => {
 
           {/* Time slider */}
           <div className="absolute bottom-4 left-4 right-4 lg:left-auto lg:right-4 lg:w-96 z-10">
-            <TimeSlider
-              time={simulationTime}
-              onTimeChange={handleTimeChange}
-              onReset={handleTimeReset}
-            />
+            <TimeSlider time={simulationTime} onTimeChange={handleTimeChange} onReset={handleTimeReset} />
           </div>
 
           {/* Simulation clock */}
           <div className="absolute top-4 left-4 z-10 hidden lg:block">
-            <SimulationClock
-              simulationTime={simulationTime}
-              simulationSpeed={simulationSpeed}
-              isPaused={isPaused}
-            />
+            <SimulationClock simulationTime={simulationTime} simulationSpeed={simulationSpeed} isPaused={isPaused} />
           </div>
 
-          {/* Satellite info popup - top right corner */}
+          {/* Satellite info popup */}
           {selectedSatellite && (
             <div className="absolute top-4 right-4 z-10">
-              <SatelliteInfoPopup
-                satellite={selectedSatellite}
-                onClose={handleClosePopup}
-              />
+              <SatelliteInfoPopup satellite={selectedSatellite} onClose={handleClosePopup} />
             </div>
           )}
 
           {/* Mobile controls overlay */}
           <div className="absolute bottom-4 left-4 right-4 lg:hidden">
             <div className="glass-card p-3 flex flex-col gap-3">
-              {/* View mode toggle for mobile */}
               <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant={viewMode === "3d" ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setViewMode("3d")}
-                >
-                  <Globe2 className="h-3.5 w-3.5" />
-                  3D
+                <Button variant={viewMode === "3d" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setViewMode("3d")}>
+                  <Globe2 className="h-3.5 w-3.5" /> 3D
                 </Button>
-                <Button
-                  variant={viewMode === "2d" ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setViewMode("2d")}
-                >
-                  <Map className="h-3.5 w-3.5" />
-                  2D
+                <Button variant={viewMode === "2d" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setViewMode("2d")}>
+                  <Map className="h-3.5 w-3.5" /> 2D
                 </Button>
               </div>
-              
               <div className="flex items-center justify-center gap-4">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="leo-mobile" className="text-xs">LEO</Label>
@@ -584,8 +504,6 @@ const Visualization = () => {
               </div>
             </div>
           </div>
-
-          {/* Legend removed - satellite info shows in top right on click */}
         </main>
       </div>
     </div>
