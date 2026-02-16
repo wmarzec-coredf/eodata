@@ -356,7 +356,7 @@ const CesiumScene = ({
         `,
       });
     });
-  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails, showDataTransfer]);
+  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails]);
 
   // Dynamic data transfer links - computed each tick
   useEffect(() => {
@@ -367,7 +367,14 @@ const CesiumScene = ({
     const MIN_ELEVATION_DEG = 5; // minimum elevation angle for line of sight
     const linkEntities: any[] = [];
 
+    let lastUpdateTime = 0;
+    const UPDATE_INTERVAL_MS = 2000; // Update links every 2 seconds
+
     const onTick = () => {
+      const now = Date.now();
+      if (now - lastUpdateTime < UPDATE_INTERVAL_MS) return;
+      lastUpdateTime = now;
+
       // Remove previous link entities
       linkEntities.forEach((e) => {
         if (viewer.entities.contains(e)) viewer.entities.remove(e);
@@ -402,15 +409,12 @@ const CesiumScene = ({
           const gsLat = (gs.lat * Math.PI) / 180;
           const gsLon = (gs.lon * Math.PI) / 180;
 
-          // Calculate elevation angle from ground station to satellite
-          const dLat = satLat - gsLat;
           const dLon = satLon - gsLon;
           const centralAngle = Math.acos(
             Math.sin(gsLat) * Math.sin(satLat) +
             Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon)
           );
 
-          // Elevation angle calculation
           const slantRange = Math.sqrt(
             EARTH_RADIUS * EARTH_RADIUS +
             (EARTH_RADIUS + satAlt) * (EARTH_RADIUS + satAlt) -
@@ -422,17 +426,15 @@ const CesiumScene = ({
           );
           const elevationDeg = 90 - (elevationAngle * 180) / Math.PI;
 
-          // Check if satellite is above minimum elevation
           if (elevationDeg >= MIN_ELEVATION_DEG) {
             const gsPosition = Cartesian3.fromDegrees(gs.lon, gs.lat, 0);
 
-            // Determine link color based on orbit type
             let linkColor = Color.CYAN.withAlpha(0.5);
             if (sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.4);
             if (sat.orbitType === "GEO") linkColor = Color.RED.withAlpha(0.4);
 
             const entity = viewer.entities.add({
-              id: `link-${sat.id}-${gs.id}-${Date.now()}`,
+              id: `link-${sat.id}-${gs.id}-${now}`,
               polyline: {
                 positions: [gsPosition, satPosition],
                 width: 1.5,
@@ -448,7 +450,6 @@ const CesiumScene = ({
       });
     };
 
-    // Run on tick
     viewer.clock.onTick.addEventListener(onTick);
 
     return () => {
