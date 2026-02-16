@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
+  defined,
   Viewer,
   Ion,
   Cartesian3,
@@ -16,6 +19,15 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 // Cesium Ion access token
 Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlZWViZWY4NS1kY2ViLTRjNmItYjM2OS00NWY4MmRjZDY1YTUiLCJpZCI6Mzc5MDgzLCJpYXQiOjE3Njg0ODA2OTN9.xaHKt0sIqM-7mTqizQGILb0yoRGBYSZ9u9zaEiDCaLM";
 
+interface SatelliteClickInfo {
+  id: string;
+  name: string;
+  orbitType: "LEO" | "MEO" | "GEO";
+  altitude: number;
+  inclination: number;
+  color: string;
+}
+
 interface CesiumSceneProps {
   showLEO: boolean;
   showMEO: boolean;
@@ -26,6 +38,7 @@ interface CesiumSceneProps {
   showTrails: boolean;
   simulationSpeed: number;
   isPaused: boolean;
+  onSatelliteClick?: (satellite: SatelliteClickInfo) => void;
 }
 
 interface SatelliteData {
@@ -100,6 +113,7 @@ const CesiumScene = ({
   showTrails,
   simulationSpeed,
   isPaused,
+  onSatelliteClick,
 }: CesiumSceneProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -149,7 +163,7 @@ const CesiumScene = ({
           fullscreenButton: false,
           vrButton: false,
           selectionIndicator: true,
-          infoBox: true,
+          infoBox: false,
           shouldAnimate: true,
         });
 
@@ -193,6 +207,35 @@ const CesiumScene = ({
       }
     };
   }, []);
+
+  // Handle satellite click via entity selection
+  useEffect(() => {
+    if (!viewerRef.current || !isInitialized || !onSatelliteClick) return;
+    const viewer = viewerRef.current;
+
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction((click: any) => {
+      const picked = viewer.scene.pick(click.position);
+      if (defined(picked) && picked.id && picked.id.id) {
+        const entityId = picked.id.id as string;
+        if (entityId.startsWith("orbit-") || entityId.startsWith("gs")) return;
+        const sat = satellites.find((s) => s.id === entityId);
+        if (sat) {
+          const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
+          onSatelliteClick({
+            id: sat.id,
+            name: sat.name,
+            orbitType: sat.orbitType,
+            altitude: sat.altitude,
+            inclination: sat.inclination,
+            color: colorMap[sat.orbitType] || "#4ade80",
+          });
+        }
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+
+    return () => handler.destroy();
+  }, [isInitialized, onSatelliteClick]);
 
   // Update simulation speed and pause state
   useEffect(() => {

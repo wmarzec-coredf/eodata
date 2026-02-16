@@ -443,6 +443,7 @@ const Visualization = () => {
                   showTrails={showTrails}
                   simulationSpeed={simulationSpeed}
                   isPaused={isPaused}
+                  onSatelliteClick={handleSatelliteClick}
                 />
               </Suspense>
             ) : (
