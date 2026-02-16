@@ -123,6 +123,72 @@ const generateOrbitPoints = (altitude: number, inclination: number, numPoints: n
   return points;
 };
 
+// Generate a satellite-shaped icon as a data URI canvas
+const createSatelliteIcon = (color: Color, size: number = 32): string => {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const cx = size / 2;
+  const cy = size / 2;
+  const cssColor = color.toCssColorString();
+
+  // Solar panels (two rectangles on each side)
+  ctx.fillStyle = cssColor;
+  ctx.globalAlpha = 0.8;
+  ctx.fillRect(1, cy - 3, size / 3 - 2, 6);
+  ctx.fillRect(size - size / 3 + 1, cy - 3, size / 3 - 2, 6);
+
+  // Panel lines
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 0.5;
+  const panelW = size / 3 - 2;
+  for (let i = 1; i < 3; i++) {
+    const lx = 1 + (panelW / 3) * i;
+    ctx.beginPath(); ctx.moveTo(lx, cy - 3); ctx.lineTo(lx, cy + 3); ctx.stroke();
+    const rx = size - size / 3 + 1 + (panelW / 3) * i;
+    ctx.beginPath(); ctx.moveTo(rx, cy - 3); ctx.lineTo(rx, cy + 3); ctx.stroke();
+  }
+
+  // Body (center square with rounded corners)
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = cssColor;
+  const bodySize = size * 0.3;
+  const bodyX = cx - bodySize / 2;
+  const bodyY = cy - bodySize / 2;
+  ctx.beginPath();
+  ctx.roundRect(bodyX, bodyY, bodySize, bodySize, 2);
+  ctx.fill();
+
+  // Body highlight
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.fillRect(bodyX + 1, bodyY + 1, bodySize - 2, bodySize / 2 - 1);
+
+  // Antenna
+  ctx.strokeStyle = cssColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, bodyY);
+  ctx.lineTo(cx, bodyY - 5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, bodyY - 6, 2, 0, Math.PI * 2);
+  ctx.fillStyle = cssColor;
+  ctx.fill();
+
+  // White outline glow
+  ctx.shadowColor = "white";
+  ctx.shadowBlur = 3;
+  ctx.strokeStyle = "rgba(255,255,255,0.6)";
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.roundRect(bodyX, bodyY, bodySize, bodySize, 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  return canvas.toDataURL();
+};
+
 const defaultSatellites: SatelliteData[] = [
   { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
   { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
@@ -371,11 +437,10 @@ const CesiumScene = ({
         id: sat.id,
         name: sat.name,
         position: position,
-        point: {
-          pixelSize: sat.orbitType === "GEO" ? 12 : sat.orbitType === "MEO" ? 10 : 8,
-          color: sat.color,
-          outlineColor: Color.WHITE,
-          outlineWidth: 2,
+        billboard: {
+          image: createSatelliteIcon(sat.color, sat.orbitType === "GEO" ? 40 : sat.orbitType === "MEO" ? 36 : 32),
+          width: sat.orbitType === "GEO" ? 28 : sat.orbitType === "MEO" ? 24 : 20,
+          height: sat.orbitType === "GEO" ? 28 : sat.orbitType === "MEO" ? 24 : 20,
         },
         label: {
           text: sat.name,
