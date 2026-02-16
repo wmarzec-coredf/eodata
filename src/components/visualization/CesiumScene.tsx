@@ -54,6 +54,7 @@ interface CesiumSceneProps {
   showTrails: boolean;
   simulationSpeed: number;
   isPaused: boolean;
+  maxLinkDistance: number;
   satellites?: SatelliteData[];
   groundStationsList?: GroundStationData[];
   onSatelliteClick?: (satellite: SatelliteClickInfo) => void;
@@ -227,6 +228,7 @@ const CesiumScene = ({
   showTrails,
   simulationSpeed,
   isPaused,
+  maxLinkDistance,
   satellites: satellitesProp,
   groundStationsList: groundStationsProp,
   onSatelliteClick,
@@ -483,7 +485,7 @@ const CesiumScene = ({
     const viewer = viewerRef.current;
     const EARTH_RADIUS = 6371000;
     const MIN_ELEVATION_DEG = 5;
-    const MAX_INTER_SAT_DISTANCE_KM = 8000; // Max distance for inter-satellite links
+    const MAX_INTER_SAT_DISTANCE_KM = maxLinkDistance;
     const linkEntities: any[] = [];
 
     let lastUpdateTime = 0;
@@ -653,7 +655,7 @@ const CesiumScene = ({
         });
       }
     };
-  }, [isInitialized, showDataTransfer, showGroundLinks, showGroundStations, showLEO, showMEO, showGEO]);
+  }, [isInitialized, showDataTransfer, showGroundLinks, showGroundStations, showLEO, showMEO, showGEO, maxLinkDistance]);
 
   return (
     <div
