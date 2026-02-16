@@ -15,11 +15,9 @@ import {
   Gauge,
   Play,
   Pause,
-  Sparkles,
   Maximize,
   Minimize,
   Circle,
-  Sun,
   Link2,
   Database,
   Clock,
@@ -59,11 +57,8 @@ const Visualization = () => {
   const [showGEO, setShowGEO] = useState(true);
   const [showGroundStations, setShowGroundStations] = useState(true);
   const [showDataTransfer, setShowDataTransfer] = useState(true);
-  const [showTrails, setShowTrails] = useState(true);
   const [showOrbits, setShowOrbits] = useState(true);
-  const [showSun, setShowSun] = useState(true);
   const [showGroundLinks, setShowGroundLinks] = useState(true);
-  const [showSatelliteGlow, setShowSatelliteGlow] = useState(false);
   const [useTLEData, setUseTLEData] = useState(true);
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const [simulationSpeed, setSimulationSpeed] = useState(60);
@@ -293,38 +288,8 @@ const Visualization = () => {
                   <Switch checked={showOrbits} onCheckedChange={setShowOrbits} />
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    <div>
-                      <p className="text-sm font-medium">Satellite Trails</p>
-                      <p className="text-xs text-muted-foreground">Show recent paths</p>
-                    </div>
-                  </div>
-                  <Switch checked={showTrails} onCheckedChange={setShowTrails} />
-                </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-3">
-                    <Sun className="h-4 w-4 text-yellow-500" />
-                    <div>
-                      <p className="text-sm font-medium">Sun</p>
-                      <p className="text-xs text-muted-foreground">Day/night cycle</p>
-                    </div>
-                  </div>
-                  <Switch checked={showSun} onCheckedChange={setShowSun} />
-                </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    <div>
-                      <p className="text-sm font-medium">Satellite Glow</p>
-                      <p className="text-xs text-muted-foreground">Point lights on satellites</p>
-                    </div>
-                  </div>
-                  <Switch checked={showSatelliteGlow} onCheckedChange={setShowSatelliteGlow} />
-                </div>
 
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
@@ -440,7 +405,7 @@ const Visualization = () => {
                   showGroundStations={showGroundStations}
                   showDataTransfer={showDataTransfer}
                   showOrbits={showOrbits}
-                  showTrails={showTrails}
+                  showTrails={false}
                   simulationSpeed={simulationSpeed}
                   isPaused={isPaused}
                   onSatelliteClick={handleSatelliteClick}
