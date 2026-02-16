@@ -173,7 +173,7 @@ const CesiumScene = ({
           geocoder: false,
           fullscreenButton: false,
           vrButton: false,
-          selectionIndicator: false,
+          selectionIndicator: true,
           infoBox: false,
           shouldAnimate: true,
         });
@@ -219,42 +219,44 @@ const CesiumScene = ({
     };
   }, []);
 
-  // Handle satellite click via entity selection
+  // Handle satellite click via Cesium's built-in selectedEntityChanged
   useEffect(() => {
     if (!viewerRef.current || !isInitialized || !onSatelliteClick) return;
     const viewer = viewerRef.current;
 
-    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction((click: any) => {
-      const pickedObjects = viewer.scene.drillPick(click.position, 10);
-      for (const picked of pickedObjects) {
-        if (!defined(picked) || !picked.id || !picked.id.id) continue;
-        const entityId = picked.id.id as string;
-        if (entityId.startsWith("orbit-") || entityId.startsWith("gs") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) continue;
-        const sat = satellites.find((s) => s.id === entityId);
-        if (sat) {
-          const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
-          const conn = connectionsRef.current;
-          const connectedSatNames = (conn.satLinks[sat.id] || []).map(
-            (id) => satellites.find((s) => s.id === id)?.name || id
-          );
-          const connectedStationNames = conn.gsLinks[sat.id] || [];
-          onSatelliteClick({
-            id: sat.id,
-            name: sat.name,
-            orbitType: sat.orbitType,
-            altitude: sat.altitude,
-            inclination: sat.inclination,
-            color: colorMap[sat.orbitType] || "#4ade80",
-            connectedSatellites: connectedSatNames,
-            connectedStations: connectedStationNames,
-          });
-          break;
-        }
+    const onSelectedEntityChanged = () => {
+      const selected = viewer.selectedEntity;
+      if (!selected || !selected.id) return;
+      const entityId = selected.id as string;
+      if (entityId.startsWith("orbit-") || entityId.startsWith("gs") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) return;
+      const sat = satellites.find((s) => s.id === entityId);
+      if (sat) {
+        const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
+        const conn = connectionsRef.current;
+        const connectedSatNames = (conn.satLinks[sat.id] || []).map(
+          (id) => satellites.find((s) => s.id === id)?.name || id
+        );
+        const connectedStationNames = conn.gsLinks[sat.id] || [];
+        onSatelliteClick({
+          id: sat.id,
+          name: sat.name,
+          orbitType: sat.orbitType,
+          altitude: sat.altitude,
+          inclination: sat.inclination,
+          color: colorMap[sat.orbitType] || "#4ade80",
+          connectedSatellites: connectedSatNames,
+          connectedStations: connectedStationNames,
+        });
       }
-    }, ScreenSpaceEventType.LEFT_CLICK);
+    };
 
-    return () => handler.destroy();
+    viewer.selectedEntityChanged.addEventListener(onSelectedEntityChanged);
+
+    return () => {
+      if (!viewer.isDestroyed()) {
+        viewer.selectedEntityChanged.removeEventListener(onSelectedEntityChanged);
+      }
+    };
   }, [isInitialized, onSatelliteClick]);
 
   // Update simulation speed and pause state
