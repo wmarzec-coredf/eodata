@@ -159,7 +159,7 @@ const Visualization = () => {
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
             <p className="text-xs font-medium text-primary">Cesium Globe View</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Photorealistic 3D visualization powered by CesiumJS. Use the scene mode picker to switch between 3D, 2D, and Columbus views.
+              Visualization powered by CesiumJS. Use the scene mode picker to switch between 3D, 2D, and Columbus views.
             </p>
           </div>
 
