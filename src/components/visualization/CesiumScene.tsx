@@ -38,6 +38,7 @@ interface CesiumSceneProps {
   showGEO: boolean;
   showGroundStations: boolean;
   showDataTransfer: boolean;
+  showGroundLinks: boolean;
   showOrbits: boolean;
   showTrails: boolean;
   simulationSpeed: number;
@@ -114,6 +115,7 @@ const CesiumScene = ({
   showGEO,
   showGroundStations,
   showDataTransfer,
+  showGroundLinks,
   showOrbits,
   showTrails,
   simulationSpeed,
@@ -358,17 +360,26 @@ const CesiumScene = ({
     });
   }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails]);
 
-  // Dynamic data transfer links - computed each tick
+  // Dynamic data transfer & ground links - computed each tick
   useEffect(() => {
-    if (!viewerRef.current || !isInitialized || !showDataTransfer || !showGroundStations) return;
+    if (!viewerRef.current || !isInitialized) return;
+    if (!showDataTransfer && !showGroundLinks) return;
 
     const viewer = viewerRef.current;
-    const EARTH_RADIUS = 6371000; // meters
-    const MIN_ELEVATION_DEG = 5; // minimum elevation angle for line of sight
+    const EARTH_RADIUS = 6371000;
+    const MIN_ELEVATION_DEG = 5;
+    const MAX_INTER_SAT_DISTANCE_KM = 5000; // Max distance for inter-satellite links
     const linkEntities: any[] = [];
 
     let lastUpdateTime = 0;
-    const UPDATE_INTERVAL_MS = 2000; // Update links every 2 seconds
+    const UPDATE_INTERVAL_MS = 2000;
+
+    const getDistance = (pos1: Cartesian3, pos2: Cartesian3): number => {
+      const dx = pos1.x - pos2.x;
+      const dy = pos1.y - pos2.y;
+      const dz = pos1.z - pos2.z;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz) / 1000; // km
+    };
 
     const onTick = () => {
       const now = Date.now();
@@ -381,11 +392,9 @@ const CesiumScene = ({
       });
       linkEntities.length = 0;
 
-      if (!showDataTransfer || !showGroundStations) return;
-
       const currentTime = viewer.clock.currentTime;
 
-      // Get visible satellite entities and their current positions
+      // Get visible satellites with positions
       const visibleSatellites = satellites.filter((sat) => {
         if (sat.orbitType === "LEO") return showLEO;
         if (sat.orbitType === "MEO") return showMEO;
@@ -393,53 +402,105 @@ const CesiumScene = ({
         return true;
       });
 
+      const satPositions: { sat: SatelliteData; position: Cartesian3 }[] = [];
       visibleSatellites.forEach((sat) => {
         const satEntity = viewer.entities.getById(sat.id);
         if (!satEntity || !satEntity.position) return;
+        const pos = satEntity.position.getValue(currentTime);
+        if (pos) satPositions.push({ sat, position: pos });
+      });
 
-        const satPosition = satEntity.position.getValue(currentTime);
-        if (!satPosition) return;
+      // Inter-satellite links: connect each satellite to its nearest neighbor within range
+      if (showDataTransfer) {
+        const connected = new Set<string>();
+        satPositions.forEach(({ sat: satA, position: posA }) => {
+          let nearestDist = Infinity;
+          let nearestIdx = -1;
 
-        const satCartographic = Cartographic.fromCartesian(satPosition);
-        const satLat = satCartographic.latitude;
-        const satLon = satCartographic.longitude;
-        const satAlt = satCartographic.height;
+          satPositions.forEach(({ sat: satB, position: posB }, j) => {
+            if (satA.id === satB.id) return;
+            const pairKey = [satA.id, satB.id].sort().join("-");
+            if (connected.has(pairKey)) return;
+            const dist = getDistance(posA, posB);
+            if (dist < nearestDist && dist <= MAX_INTER_SAT_DISTANCE_KM) {
+              nearestDist = dist;
+              nearestIdx = j;
+            }
+          });
 
+          if (nearestIdx >= 0) {
+            const { sat: satB, position: posB } = satPositions[nearestIdx];
+            const pairKey = [satA.id, satB.id].sort().join("-");
+            connected.add(pairKey);
+
+            const entity = viewer.entities.add({
+              id: `isl-${pairKey}-${now}`,
+              polyline: {
+                positions: [posA, posB],
+                width: 1.5,
+                material: new PolylineGlowMaterialProperty({
+                  glowPower: 0.25,
+                  color: Color.fromCssColorString("#00ffaa").withAlpha(0.6),
+                }),
+              },
+            });
+            linkEntities.push(entity);
+          }
+        });
+      }
+
+      // Ground station links: connect each station to the nearest visible satellite
+      if (showGroundLinks && showGroundStations) {
         groundStationsList.forEach((gs) => {
           const gsLat = (gs.lat * Math.PI) / 180;
           const gsLon = (gs.lon * Math.PI) / 180;
+          const gsPosition = Cartesian3.fromDegrees(gs.lon, gs.lat, 0);
 
-          const dLon = satLon - gsLon;
-          const centralAngle = Math.acos(
-            Math.sin(gsLat) * Math.sin(satLat) +
-            Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon)
-          );
+          let bestSat: { sat: SatelliteData; position: Cartesian3; elevation: number } | null = null;
 
-          const slantRange = Math.sqrt(
-            EARTH_RADIUS * EARTH_RADIUS +
-            (EARTH_RADIUS + satAlt) * (EARTH_RADIUS + satAlt) -
-            2 * EARTH_RADIUS * (EARTH_RADIUS + satAlt) * Math.cos(centralAngle)
-          );
+          satPositions.forEach(({ sat, position: satPosition }) => {
+            const satCartographic = Cartographic.fromCartesian(satPosition);
+            const satLat = satCartographic.latitude;
+            const satLon = satCartographic.longitude;
+            const satAlt = satCartographic.height;
 
-          const elevationAngle = Math.asin(
-            ((EARTH_RADIUS + satAlt) * Math.sin(centralAngle)) / slantRange
-          );
-          const elevationDeg = 90 - (elevationAngle * 180) / Math.PI;
+            const dLon = satLon - gsLon;
+            const centralAngle = Math.acos(
+              Math.min(1, Math.max(-1,
+                Math.sin(gsLat) * Math.sin(satLat) +
+                Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon)
+              ))
+            );
 
-          if (elevationDeg >= MIN_ELEVATION_DEG) {
-            const gsPosition = Cartesian3.fromDegrees(gs.lon, gs.lat, 0);
+            const slantRange = Math.sqrt(
+              EARTH_RADIUS * EARTH_RADIUS +
+              (EARTH_RADIUS + satAlt) * (EARTH_RADIUS + satAlt) -
+              2 * EARTH_RADIUS * (EARTH_RADIUS + satAlt) * Math.cos(centralAngle)
+            );
 
-            let linkColor = Color.CYAN.withAlpha(0.5);
-            if (sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.4);
-            if (sat.orbitType === "GEO") linkColor = Color.RED.withAlpha(0.4);
+            const sinVal = ((EARTH_RADIUS + satAlt) * Math.sin(centralAngle)) / slantRange;
+            const elevationAngle = Math.asin(Math.min(1, Math.max(-1, sinVal)));
+            const elevationDeg = 90 - (elevationAngle * 180) / Math.PI;
+
+            if (elevationDeg >= MIN_ELEVATION_DEG) {
+              if (!bestSat || elevationDeg > bestSat.elevation) {
+                bestSat = { sat, position: satPosition, elevation: elevationDeg };
+              }
+            }
+          });
+
+          if (bestSat) {
+            let linkColor = Color.CYAN.withAlpha(0.4);
+            if (bestSat.sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.35);
+            if (bestSat.sat.orbitType === "GEO") linkColor = Color.ORANGERED.withAlpha(0.35);
 
             const entity = viewer.entities.add({
-              id: `link-${sat.id}-${gs.id}-${now}`,
+              id: `gsl-${gs.id}-${bestSat.sat.id}-${now}`,
               polyline: {
-                positions: [gsPosition, satPosition],
-                width: 1.5,
+                positions: [gsPosition, bestSat.position],
+                width: 1.2,
                 material: new PolylineGlowMaterialProperty({
-                  glowPower: 0.3,
+                  glowPower: 0.2,
                   color: linkColor,
                 }),
               },
@@ -447,7 +508,7 @@ const CesiumScene = ({
             linkEntities.push(entity);
           }
         });
-      });
+      }
     };
 
     viewer.clock.onTick.addEventListener(onTick);
@@ -460,7 +521,7 @@ const CesiumScene = ({
         });
       }
     };
-  }, [isInitialized, showDataTransfer, showGroundStations, showLEO, showMEO, showGEO]);
+  }, [isInitialized, showDataTransfer, showGroundLinks, showGroundStations, showLEO, showMEO, showGEO]);
 
   return (
     <div
