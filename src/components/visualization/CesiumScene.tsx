@@ -31,6 +31,8 @@ interface SatelliteClickInfo {
   altitude: number;
   inclination: number;
   color: string;
+  connectedSatellites?: string[];
+  connectedStations?: string[];
 }
 
 interface CesiumSceneProps {
@@ -125,6 +127,7 @@ const CesiumScene = ({
 }: CesiumSceneProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
+  const connectionsRef = useRef<{ satLinks: Record<string, string[]>; gsLinks: Record<string, string[]> }>({ satLinks: {}, gsLinks: {} });
   const [isInitialized, setIsInitialized] = useState(false);
 
   const satellites: SatelliteData[] = [
@@ -170,7 +173,7 @@ const CesiumScene = ({
           geocoder: false,
           fullscreenButton: false,
           vrButton: false,
-          selectionIndicator: true,
+          selectionIndicator: false,
           infoBox: false,
           shouldAnimate: true,
         });
@@ -230,6 +233,11 @@ const CesiumScene = ({
         const sat = satellites.find((s) => s.id === entityId);
         if (sat) {
           const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
+          const conn = connectionsRef.current;
+          const connectedSatNames = (conn.satLinks[sat.id] || []).map(
+            (id) => satellites.find((s) => s.id === id)?.name || id
+          );
+          const connectedStationNames = conn.gsLinks[sat.id] || [];
           onSatelliteClick({
             id: sat.id,
             name: sat.name,
@@ -237,6 +245,8 @@ const CesiumScene = ({
             altitude: sat.altitude,
             inclination: sat.inclination,
             color: colorMap[sat.orbitType] || "#4ade80",
+            connectedSatellites: connectedSatNames,
+            connectedStations: connectedStationNames,
           });
         }
       }
@@ -393,6 +403,10 @@ const CesiumScene = ({
       });
       linkEntities.length = 0;
 
+      // Track connections for popup info
+      const satLinks: Record<string, string[]> = {};
+      const gsLinks: Record<string, string[]> = {};
+
       const currentTime = viewer.clock.currentTime;
 
       // Get visible satellites with positions
@@ -433,6 +447,12 @@ const CesiumScene = ({
             const { sat: satB, position: posB } = satPositions[nearestIdx];
             const pairKey = [satA.id, satB.id].sort().join("-");
             connected.add(pairKey);
+
+            // Track connections
+            if (!satLinks[satA.id]) satLinks[satA.id] = [];
+            if (!satLinks[satB.id]) satLinks[satB.id] = [];
+            satLinks[satA.id].push(satB.id);
+            satLinks[satB.id].push(satA.id);
 
             const entity = viewer.entities.add({
               id: `isl-${pairKey}-${now}`,
@@ -493,6 +513,10 @@ const CesiumScene = ({
             if (bestSat.sat.orbitType === "MEO") linkColor = Color.YELLOW.withAlpha(0.35);
             if (bestSat.sat.orbitType === "GEO") linkColor = Color.ORANGERED.withAlpha(0.35);
 
+            // Track ground station connection
+            if (!gsLinks[bestSat.sat.id]) gsLinks[bestSat.sat.id] = [];
+            gsLinks[bestSat.sat.id].push(gs.name);
+
             const entity = viewer.entities.add({
               id: `gsl-${gs.id}-${bestSat.sat.id}-${now}`,
               polyline: {
@@ -510,6 +534,9 @@ const CesiumScene = ({
           }
         });
       }
+
+      // Store connections for click handler
+      connectionsRef.current = { satLinks, gsLinks };
     };
 
     viewer.clock.onTick.addEventListener(onTick);
