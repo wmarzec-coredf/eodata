@@ -35,6 +35,14 @@ interface SatelliteClickInfo {
   connectedStations?: string[];
 }
 
+interface GroundStationClickInfo {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  connectedSatellite?: string;
+}
+
 interface CesiumSceneProps {
   showLEO: boolean;
   showMEO: boolean;
@@ -47,6 +55,7 @@ interface CesiumSceneProps {
   simulationSpeed: number;
   isPaused: boolean;
   onSatelliteClick?: (satellite: SatelliteClickInfo) => void;
+  onGroundStationClick?: (station: GroundStationClickInfo) => void;
 }
 
 interface SatelliteData {
@@ -124,10 +133,11 @@ const CesiumScene = ({
   simulationSpeed,
   isPaused,
   onSatelliteClick,
+  onGroundStationClick,
 }: CesiumSceneProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const connectionsRef = useRef<{ satLinks: Record<string, string[]>; gsLinks: Record<string, string[]> }>({ satLinks: {}, gsLinks: {} });
+  const connectionsRef = useRef<{ satLinks: Record<string, string[]>; gsLinks: Record<string, string[]>; stationToSat: Record<string, string> }>({ satLinks: {}, gsLinks: {}, stationToSat: {} });
   const [isInitialized, setIsInitialized] = useState(false);
 
   const satellites: SatelliteData[] = [
@@ -219,9 +229,9 @@ const CesiumScene = ({
     };
   }, []);
 
-  // Handle satellite click
+  // Handle entity clicks (satellites and ground stations)
   useEffect(() => {
-    if (!viewerRef.current || !isInitialized || !onSatelliteClick) return;
+    if (!viewerRef.current || !isInitialized) return;
     const viewer = viewerRef.current;
 
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -230,12 +240,29 @@ const CesiumScene = ({
       for (const picked of pickedObjects) {
         if (!defined(picked) || !picked.id || !picked.id.id) continue;
         const entityId = picked.id.id as string;
-        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-") || entityId.startsWith("gs")) continue;
-        const sat = satellites.find((s) => s.id === entityId);
-        if (sat) {
-          // Also select in Cesium for the selection indicator
+
+        // Skip non-interactive entities
+        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) continue;
+
+        // Ground station click
+        const gs = groundStationsList.find((s) => s.id === entityId);
+        if (gs && onGroundStationClick) {
           viewer.selectedEntity = picked.id;
-          
+          const conn = connectionsRef.current;
+          onGroundStationClick({
+            id: gs.id,
+            name: gs.name,
+            lat: gs.lat,
+            lon: gs.lon,
+            connectedSatellite: conn.stationToSat[gs.id],
+          });
+          return;
+        }
+
+        // Satellite click
+        const sat = satellites.find((s) => s.id === entityId);
+        if (sat && onSatelliteClick) {
+          viewer.selectedEntity = picked.id;
           const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
           const conn = connectionsRef.current;
           const connectedSatNames = (conn.satLinks[sat.id] || []).map(
@@ -258,7 +285,7 @@ const CesiumScene = ({
     }, ScreenSpaceEventType.LEFT_CLICK);
 
     return () => handler.destroy();
-  }, [isInitialized, onSatelliteClick]);
+  }, [isInitialized, onSatelliteClick, onGroundStationClick]);
 
   // Update simulation speed and pause state
   useEffect(() => {
@@ -411,6 +438,7 @@ const CesiumScene = ({
       // Track connections for popup info
       const satLinks: Record<string, string[]> = {};
       const gsLinks: Record<string, string[]> = {};
+      const stationToSat: Record<string, string> = {};
 
       const currentTime = viewer.clock.currentTime;
 
@@ -519,6 +547,7 @@ const CesiumScene = ({
             if (bestSat.sat.orbitType === "GEO") linkColor = Color.ORANGERED.withAlpha(0.35);
 
             gsLinks[bestSat.sat.id] = [gs.name];
+            stationToSat[gs.id] = bestSat.sat.name;
 
             const entity = viewer.entities.add({
               id: `gsl-${gs.id}-${bestSat.sat.id}-${now}`,
@@ -539,7 +568,7 @@ const CesiumScene = ({
       }
 
       // Store connections for click handler
-      connectionsRef.current = { satLinks, gsLinks };
+      connectionsRef.current = { satLinks, gsLinks, stationToSat };
     };
 
     viewer.clock.onTick.addEventListener(onTick);
