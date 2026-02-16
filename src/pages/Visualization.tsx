@@ -24,10 +24,8 @@ import {
   Loader2,
 } from "lucide-react";
 import GroundTrackMap from "@/components/visualization/GroundTrackMap";
-import TimeSlider from "@/components/visualization/TimeSlider";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
-import SimulationClock from "@/components/visualization/SimulationClock";
 import PassPrediction from "@/components/visualization/PassPrediction";
 import esaLogo from "@/assets/esa-logo.svg";
 
@@ -426,15 +424,8 @@ const Visualization = () => {
             )}
           </div>
 
-          {/* Time slider */}
-          <div className="absolute bottom-4 left-4 right-4 lg:left-auto lg:right-4 lg:w-96 z-10">
-            <TimeSlider time={simulationTime} onTimeChange={handleTimeChange} onReset={handleTimeReset} />
-          </div>
 
-          {/* Simulation clock */}
-          <div className="absolute top-4 left-4 z-10 hidden lg:block">
-            <SimulationClock simulationTime={simulationTime} simulationSpeed={simulationSpeed} isPaused={isPaused} />
-          </div>
+
 
           {/* Satellite info popup */}
           {selectedSatellite && (
