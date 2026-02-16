@@ -411,7 +411,7 @@ const CesiumScene = ({
     const viewer = viewerRef.current;
     const EARTH_RADIUS = 6371000;
     const MIN_ELEVATION_DEG = 5;
-    const MAX_INTER_SAT_DISTANCE_KM = 5000; // Max distance for inter-satellite links
+    const MAX_INTER_SAT_DISTANCE_KM = 8000; // Max distance for inter-satellite links
     const linkEntities: any[] = [];
 
     let lastUpdateTime = 0;
