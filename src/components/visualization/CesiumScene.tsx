@@ -224,11 +224,12 @@ const CesiumScene = ({
     if (!viewerRef.current || !isInitialized || !onSatelliteClick) return;
     const viewer = viewerRef.current;
 
-    const onSelectedEntityChanged = () => {
-      const selected = viewer.selectedEntity;
+    const onSelectedEntityChanged = (entity: any) => {
+      const selected = entity || viewer.selectedEntity;
+      console.log("Selected entity:", selected?.id, selected?.name);
       if (!selected || !selected.id) return;
       const entityId = selected.id as string;
-      if (entityId.startsWith("orbit-") || entityId.startsWith("gs") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) return;
+      if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-") || entityId.startsWith("gs")) return;
       const sat = satellites.find((s) => s.id === entityId);
       if (sat) {
         const colorMap: Record<string, string> = { LEO: "#4ade80", MEO: "#facc15", GEO: "#f97316" };
