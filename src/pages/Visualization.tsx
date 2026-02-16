@@ -64,6 +64,7 @@ const Visualization = () => {
   const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
   const [selectedStation, setSelectedStation] = useState<GroundStationInfo | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [maxLinkDistance, setMaxLinkDistance] = useState(8000);
 
   const baseTime = useMemo(() => new Date(), []);
 
@@ -240,6 +241,28 @@ const Visualization = () => {
                   <Switch checked={showDataTransfer} onCheckedChange={setShowDataTransfer} />
                 </div>
 
+                {showDataTransfer && (
+                  <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground">Link Distance</p>
+                      <span className="text-xs font-mono text-primary">{maxLinkDistance.toLocaleString()} km</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={2000}
+                      max={50000}
+                      step={500}
+                      value={maxLinkDistance}
+                      onChange={(e) => setMaxLinkDistance(Number(e.target.value))}
+                      className="w-full h-1.5 accent-primary cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>2,000 km</span>
+                      <span>50,000 km</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
                     <Link2 className="h-4 w-4 text-accent" />
@@ -373,6 +396,7 @@ const Visualization = () => {
                   showTrails={false}
                   simulationSpeed={simulationSpeed}
                   isPaused={isPaused}
+                  maxLinkDistance={maxLinkDistance}
                   satellites={experimentConfig.satellites}
                   groundStationsList={experimentConfig.groundStations}
                   onSatelliteClick={handleSatelliteClick}
