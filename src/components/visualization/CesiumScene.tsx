@@ -6,12 +6,10 @@ import {
   Color,
   JulianDate,
   SampledPositionProperty,
-  Entity,
   PolylineGlowMaterialProperty,
   ClockRange,
   ClockStep,
   IonImageryProvider,
-  createWorldTerrainAsync,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -24,6 +22,10 @@ interface CesiumSceneProps {
   showGEO: boolean;
   showGroundStations: boolean;
   showDataTransfer: boolean;
+  showOrbits: boolean;
+  showTrails: boolean;
+  simulationSpeed: number;
+  isPaused: boolean;
 }
 
 interface SatelliteData {
@@ -43,7 +45,6 @@ interface GroundStationData {
   lon: number;
 }
 
-// Helper to create satellite orbit positions with proper animation
 const createOrbitPath = (
   altitude: number,
   inclination: number,
@@ -54,60 +55,39 @@ const createOrbitPath = (
   const property = new SampledPositionProperty();
   const earthRadius = 6371;
   const orbitRadius = earthRadius + altitude;
-  
-  // Orbital period in seconds using Kepler's 3rd law
-  const mu = 398600.4418; // Earth's gravitational parameter
+  const mu = 398600.4418;
   const orbitalPeriod = 2 * Math.PI * Math.sqrt(Math.pow(orbitRadius, 3) / mu);
-  
   const numSamples = 360;
   const inclinationRad = (inclination * Math.PI) / 180;
-  
+
   for (let i = 0; i <= numSamples; i++) {
     const timeOffset = (i / numSamples) * duration;
     const time = JulianDate.addSeconds(startTime, timeOffset, new JulianDate());
-    
-    // Calculate angle based on orbital period
     const angularVelocity = (2 * Math.PI) / orbitalPeriod;
     const angle = startAngle + angularVelocity * timeOffset;
-    
-    // Calculate position in orbital plane then rotate for inclination
     const x = Math.cos(angle);
     const y = Math.sin(angle) * Math.cos(inclinationRad);
     const z = Math.sin(angle) * Math.sin(inclinationRad);
-    
-    // Convert to lat/lon/alt
     const lon = Math.atan2(y, x) * (180 / Math.PI);
     const lat = Math.asin(z) * (180 / Math.PI);
-    
     const position = Cartesian3.fromDegrees(lon, lat, altitude * 1000);
     property.addSample(time, position);
   }
-  
   return property;
 };
 
-// Generate orbit line points
-const generateOrbitPoints = (
-  altitude: number,
-  inclination: number,
-  numPoints: number = 180
-): Cartesian3[] => {
+const generateOrbitPoints = (altitude: number, inclination: number, numPoints: number = 180): Cartesian3[] => {
   const inclinationRad = (inclination * Math.PI) / 180;
   const points: Cartesian3[] = [];
-  
   for (let i = 0; i <= numPoints; i++) {
     const angle = (i / numPoints) * 2 * Math.PI;
-    
     const x = Math.cos(angle);
     const y = Math.sin(angle) * Math.cos(inclinationRad);
     const z = Math.sin(angle) * Math.sin(inclinationRad);
-    
     const lon = Math.atan2(y, x) * (180 / Math.PI);
     const lat = Math.asin(z) * (180 / Math.PI);
-    
     points.push(Cartesian3.fromDegrees(lon, lat, altitude * 1000));
   }
-  
   return points;
 };
 
@@ -116,12 +96,15 @@ const CesiumScene = ({
   showMEO,
   showGEO,
   showGroundStations,
+  showOrbits,
+  showTrails,
+  simulationSpeed,
+  isPaused,
 }: CesiumSceneProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Define satellites
   const satellites: SatelliteData[] = [
     { id: "leo1", name: "Sentinel-1A", orbitType: "LEO", altitude: 693, inclination: 98.18, color: Color.LIME, startAngle: 0 },
     { id: "leo2", name: "Sentinel-2A", orbitType: "LEO", altitude: 786, inclination: 98.62, color: Color.LIME, startAngle: Math.PI / 2 },
@@ -140,7 +123,7 @@ const CesiumScene = ({
     { id: "geo3", name: "MSG-4", orbitType: "GEO", altitude: 35786, inclination: 0.1, color: Color.RED, startAngle: Math.PI * 1.33 },
   ];
 
-  const groundStations: GroundStationData[] = [
+  const groundStationsList: GroundStationData[] = [
     { id: "gs1", name: "Kiruna", lat: 67.857, lon: 20.964 },
     { id: "gs2", name: "Redu", lat: 50.002, lon: 5.146 },
     { id: "gs3", name: "Cebreros", lat: 40.453, lon: -4.368 },
@@ -170,7 +153,6 @@ const CesiumScene = ({
           shouldAnimate: true,
         });
 
-        // Add Bing Maps imagery (free tier available)
         try {
           const imageryProvider = await IonImageryProvider.fromAssetId(2);
           viewer.imageryLayers.addImageryProvider(imageryProvider);
@@ -178,24 +160,21 @@ const CesiumScene = ({
           console.log("Using default imagery");
         }
 
-        // Set initial camera position to see Earth
         viewer.camera.setView({
           destination: Cartesian3.fromDegrees(10, 30, 35000000),
         });
 
-        // Configure clock for animation
         const startTime = JulianDate.now();
         const stopTime = JulianDate.addSeconds(startTime, 86400, new JulianDate());
-        
+
         viewer.clock.startTime = startTime.clone();
         viewer.clock.stopTime = stopTime.clone();
         viewer.clock.currentTime = startTime.clone();
         viewer.clock.clockRange = ClockRange.LOOP_STOP;
         viewer.clock.clockStep = ClockStep.SYSTEM_CLOCK_MULTIPLIER;
-        viewer.clock.multiplier = 60; // 60x speed for visible movement
+        viewer.clock.multiplier = 60;
         viewer.clock.shouldAnimate = true;
 
-        // Set timeline bounds
         viewer.timeline.zoomTo(startTime, stopTime);
 
         viewerRef.current = viewer;
@@ -215,6 +194,13 @@ const CesiumScene = ({
     };
   }, []);
 
+  // Update simulation speed and pause state
+  useEffect(() => {
+    if (!viewerRef.current || !isInitialized) return;
+    viewerRef.current.clock.multiplier = simulationSpeed;
+    viewerRef.current.clock.shouldAnimate = !isPaused;
+  }, [simulationSpeed, isPaused, isInitialized]);
+
   // Update entities based on visibility toggles
   useEffect(() => {
     if (!viewerRef.current || !isInitialized) return;
@@ -222,12 +208,11 @@ const CesiumScene = ({
     const viewer = viewerRef.current;
     const startTime = viewer.clock.startTime;
 
-    // Clear existing entities
     viewer.entities.removeAll();
 
     // Add ground stations
     if (showGroundStations) {
-      groundStations.forEach((station) => {
+      groundStationsList.forEach((station) => {
         viewer.entities.add({
           id: station.id,
           name: station.name,
@@ -237,7 +222,7 @@ const CesiumScene = ({
             color: Color.CYAN,
             outlineColor: Color.WHITE,
             outlineWidth: 2,
-            heightReference: 1, // CLAMP_TO_GROUND
+            heightReference: 1,
           },
           label: {
             text: station.name,
@@ -245,7 +230,7 @@ const CesiumScene = ({
             fillColor: Color.WHITE,
             outlineColor: Color.BLACK,
             outlineWidth: 2,
-            style: 2, // FILL_AND_OUTLINE
+            style: 2,
             pixelOffset: { x: 0, y: -20 } as any,
             heightReference: 1,
           },
@@ -263,23 +248,25 @@ const CesiumScene = ({
     });
 
     visibleSatellites.forEach((sat) => {
-      // Add orbit path
-      const orbitPoints = generateOrbitPoints(sat.altitude, sat.inclination);
-      viewer.entities.add({
-        id: `orbit-${sat.id}`,
-        polyline: {
-          positions: orbitPoints,
-          width: 1.5,
-          material: new PolylineGlowMaterialProperty({
-            glowPower: 0.2,
-            color: sat.color.withAlpha(0.4),
-          }),
-        },
-      });
+      // Orbit lines
+      if (showOrbits) {
+        const orbitPoints = generateOrbitPoints(sat.altitude, sat.inclination);
+        viewer.entities.add({
+          id: `orbit-${sat.id}`,
+          polyline: {
+            positions: orbitPoints,
+            width: 1.5,
+            material: new PolylineGlowMaterialProperty({
+              glowPower: 0.2,
+              color: sat.color.withAlpha(0.4),
+            }),
+          },
+        });
+      }
 
-      // Add satellite with animated position
+      // Satellite entity
       const position = createOrbitPath(sat.altitude, sat.inclination, sat.startAngle, startTime, 86400);
-      
+
       viewer.entities.add({
         id: sat.id,
         name: sat.name,
@@ -302,12 +289,14 @@ const CesiumScene = ({
           backgroundColor: Color.BLACK.withAlpha(0.6),
           scale: 0.8,
         },
-        path: {
-          width: 2,
-          material: sat.color.withAlpha(0.6),
-          leadTime: sat.orbitType === "LEO" ? 900 : sat.orbitType === "MEO" ? 3600 : 7200,
-          trailTime: sat.orbitType === "LEO" ? 900 : sat.orbitType === "MEO" ? 3600 : 7200,
-        },
+        path: showTrails
+          ? {
+              width: 2,
+              material: sat.color.withAlpha(0.6),
+              leadTime: sat.orbitType === "LEO" ? 900 : sat.orbitType === "MEO" ? 3600 : 7200,
+              trailTime: sat.orbitType === "LEO" ? 900 : sat.orbitType === "MEO" ? 3600 : 7200,
+            }
+          : undefined,
         description: `
           <div style="padding: 12px; font-family: sans-serif;">
             <h3 style="margin: 0 0 8px 0; color: ${sat.color.toCssColorString()};">${sat.name}</h3>
@@ -319,19 +308,13 @@ const CesiumScene = ({
         `,
       });
     });
-
-  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations]);
+  }, [isInitialized, showLEO, showMEO, showGEO, showGroundStations, showOrbits, showTrails]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="cesium-container"
-      style={{ 
-        width: "100%", 
-        height: "100%", 
-        position: "absolute", 
-        inset: 0,
-      }}
+      style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
     />
   );
 };
