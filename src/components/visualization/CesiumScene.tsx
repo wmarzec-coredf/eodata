@@ -720,6 +720,31 @@ const CesiumScene = ({
             linkEntities.push(entity);
           }
         });
+
+        // Add pulsing indicators for connected ground stations
+        groundStationsList.forEach((gs) => {
+          if (stationToSat[gs.id]) {
+            const pulseEntity = viewer.entities.add({
+              id: `pulse-${gs.id}-${now}`,
+              position: Cartesian3.fromDegrees(gs.lon, gs.lat, 0),
+              point: {
+                pixelSize: new CallbackProperty(() => {
+                  const t = (Date.now() % 2000) / 2000;
+                  return 8 + Math.sin(t * Math.PI * 2) * 8;
+                }, false) as any,
+                color: new CallbackProperty(() => {
+                  const t = (Date.now() % 2000) / 2000;
+                  const alpha = 0.6 - Math.sin(t * Math.PI * 2) * 0.4;
+                  return Color.CYAN.withAlpha(Math.max(0.05, alpha));
+                }, false) as any,
+                outlineColor: Color.CYAN.withAlpha(0.3),
+                outlineWidth: 1,
+                heightReference: 1,
+              },
+            });
+            linkEntities.push(pulseEntity);
+          }
+        });
       }
 
       // Store connections for click handler
