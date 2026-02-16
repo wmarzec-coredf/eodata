@@ -652,6 +652,27 @@ const CesiumScene = ({
             },
           });
           linkEntities.push(entity);
+
+          // Add pulsing glow on both linked satellites
+          [a, b].forEach((s) => {
+            const glowEntity = viewer.entities.add({
+              id: `sat-glow-${s.sat.id}-${now}`,
+              position: s.position,
+              point: {
+                pixelSize: new CallbackProperty(() => {
+                  const t = (Date.now() % 1500) / 1500;
+                  return 6 + Math.sin(t * Math.PI * 2) * 6;
+                }, false) as any,
+                color: new CallbackProperty(() => {
+                  const t = (Date.now() % 1500) / 1500;
+                  const alpha = 0.5 - Math.sin(t * Math.PI * 2) * 0.35;
+                  return Color.fromCssColorString("#ff44ff").withAlpha(Math.max(0.05, alpha));
+                }, false) as any,
+                outlineWidth: 0,
+              },
+            });
+            linkEntities.push(glowEntity);
+          });
         });
       }
 
