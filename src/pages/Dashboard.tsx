@@ -137,7 +137,7 @@ const Dashboard = () => {
               <ExperimentCard
                 key={experiment.id}
                 {...experiment}
-                onView={() => navigate("/visualization")}
+                onView={() => navigate(`/visualization/${experiment.id}`)}
               />
             ))}
           </div>
