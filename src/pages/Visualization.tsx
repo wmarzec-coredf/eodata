@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import SatelliteInfoPopup, { SatelliteInfo } from "@/components/visualization/SatelliteInfoPopup";
+import GroundStationInfoPopup, { GroundStationInfo } from "@/components/visualization/GroundStationInfoPopup";
 import SatelliteSearch from "@/components/visualization/SatelliteSearch";
 import PassPrediction from "@/components/visualization/PassPrediction";
 import esaLogo from "@/assets/esa-logo.svg";
@@ -58,6 +59,7 @@ const Visualization = () => {
   const [simulationSpeed, setSimulationSpeed] = useState(60);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedSatellite, setSelectedSatellite] = useState<SatelliteInfo | null>(null);
+  const [selectedStation, setSelectedStation] = useState<GroundStationInfo | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const baseTime = useMemo(() => new Date(), []);
@@ -97,9 +99,18 @@ const Visualization = () => {
 
   const handleSatelliteClick = useCallback((satellite: SatelliteInfo) => {
     setSelectedSatellite(satellite);
+    setSelectedStation(null);
   }, []);
 
-  const handleClosePopup = useCallback(() => setSelectedSatellite(null), []);
+  const handleGroundStationClick = useCallback((station: GroundStationInfo) => {
+    setSelectedStation(station);
+    setSelectedSatellite(null);
+  }, []);
+
+  const handleClosePopup = useCallback(() => {
+    setSelectedSatellite(null);
+    setSelectedStation(null);
+  }, []);
 
   const orbitStats = [
     { name: "LEO", color: "#4ade80", altitude: "200-2,000 km", satellites: 8, active: showLEO },
@@ -356,14 +367,20 @@ const Visualization = () => {
                   simulationSpeed={simulationSpeed}
                   isPaused={isPaused}
                   onSatelliteClick={handleSatelliteClick}
+                  onGroundStationClick={handleGroundStationClick}
                 />
               </Suspense>
           </div>
 
-          {/* Satellite info popup */}
+          {/* Info popups */}
           {selectedSatellite && (
             <div className="absolute top-4 right-4 z-10">
               <SatelliteInfoPopup satellite={selectedSatellite} onClose={handleClosePopup} />
+            </div>
+          )}
+          {selectedStation && (
+            <div className="absolute top-4 right-4 z-10">
+              <GroundStationInfoPopup station={selectedStation} onClose={handleClosePopup} />
             </div>
           )}
 
