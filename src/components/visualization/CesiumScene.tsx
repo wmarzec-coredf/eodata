@@ -468,22 +468,18 @@ const CesiumScene = ({
             const satAlt = satCartographic.height;
 
             const dLon = satLon - gsLon;
-            const centralAngle = Math.acos(
-              Math.min(1, Math.max(-1,
-                Math.sin(gsLat) * Math.sin(satLat) +
-                Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon)
-              ))
-            );
+            const cosCA = Math.sin(gsLat) * Math.sin(satLat) +
+              Math.cos(gsLat) * Math.cos(satLat) * Math.cos(dLon);
+            const centralAngle = Math.acos(Math.min(1, Math.max(-1, cosCA)));
 
-            const slantRange = Math.sqrt(
-              EARTH_RADIUS * EARTH_RADIUS +
-              (EARTH_RADIUS + satAlt) * (EARTH_RADIUS + satAlt) -
-              2 * EARTH_RADIUS * (EARTH_RADIUS + satAlt) * Math.cos(centralAngle)
+            // Proper elevation angle: angle above horizon from ground station
+            const R = EARTH_RADIUS;
+            const r = R + satAlt;
+            const elevationRad = Math.atan2(
+              r * Math.cos(centralAngle) - R,
+              r * Math.sin(centralAngle)
             );
-
-            const sinVal = ((EARTH_RADIUS + satAlt) * Math.sin(centralAngle)) / slantRange;
-            const elevationAngle = Math.asin(Math.min(1, Math.max(-1, sinVal)));
-            const elevationDeg = 90 - (elevationAngle * 180) / Math.PI;
+            const elevationDeg = (elevationRad * 180) / Math.PI;
 
             if (elevationDeg >= MIN_ELEVATION_DEG) {
               if (!bestSat || elevationDeg > bestSat.elevation) {
