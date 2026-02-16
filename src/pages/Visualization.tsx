@@ -125,7 +125,7 @@ const Visualization = () => {
   ];
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-background flex flex-col">
+    <div ref={containerRef} className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="h-14 border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 h-full flex items-center justify-between">
