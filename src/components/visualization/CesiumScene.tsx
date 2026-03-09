@@ -652,6 +652,48 @@ const CesiumScene = ({
             },
           });
           linkEntities.push(entity);
+
+          // Data packet traveling along the ISL
+          const islPacketA = a.position.clone();
+          const islPacketB = b.position.clone();
+          const packetEntity = viewer.entities.add({
+            id: `pkt-isl-${a.sat.id}-${b.sat.id}-${now}`,
+            position: new CallbackProperty(() => {
+              const t = (Date.now() % 2000) / 2000; // 2-second cycle
+              return new Cartesian3(
+                islPacketA.x + (islPacketB.x - islPacketA.x) * t,
+                islPacketA.y + (islPacketB.y - islPacketA.y) * t,
+                islPacketA.z + (islPacketB.z - islPacketA.z) * t,
+              );
+            }, false) as any,
+            point: {
+              pixelSize: 5,
+              color: Color.fromCssColorString("#ff88ff"),
+              outlineColor: Color.fromCssColorString("#ff44ff"),
+              outlineWidth: 2,
+            },
+          });
+          linkEntities.push(packetEntity);
+
+          // Second packet going the other direction (offset by half cycle)
+          const packetEntity2 = viewer.entities.add({
+            id: `pkt-isl2-${a.sat.id}-${b.sat.id}-${now}`,
+            position: new CallbackProperty(() => {
+              const t = ((Date.now() + 1000) % 2000) / 2000;
+              return new Cartesian3(
+                islPacketB.x + (islPacketA.x - islPacketB.x) * t,
+                islPacketB.y + (islPacketA.y - islPacketB.y) * t,
+                islPacketB.z + (islPacketA.z - islPacketB.z) * t,
+              );
+            }, false) as any,
+            point: {
+              pixelSize: 4,
+              color: Color.fromCssColorString("#ff88ff").withAlpha(0.7),
+              outlineColor: Color.fromCssColorString("#ff44ff").withAlpha(0.5),
+              outlineWidth: 1,
+            },
+          });
+          linkEntities.push(packetEntity2);
         });
       }
 
