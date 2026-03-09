@@ -379,7 +379,7 @@ const CesiumScene = ({
         const entityId = picked.id.id as string;
 
         // Skip non-interactive entities
-        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) continue;
+        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-") || entityId.startsWith("pkt-")) continue;
 
         // Ground station click
         const gs = groundStationsList.find((s) => s.id === entityId);
