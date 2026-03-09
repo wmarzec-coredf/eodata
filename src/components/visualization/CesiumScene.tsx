@@ -760,6 +760,47 @@ const CesiumScene = ({
               },
             });
             linkEntities.push(entity);
+
+            // Data packet traveling from ground station up to satellite
+            const gsPos = gsPosition.clone();
+            const satPos = bestSat.position.clone();
+            const gslPacket = viewer.entities.add({
+              id: `pkt-gsl-${gs.id}-${bestSat.sat.id}-${now}`,
+              position: new CallbackProperty(() => {
+                const t = (Date.now() % 3000) / 3000; // 3-second cycle
+                return new Cartesian3(
+                  gsPos.x + (satPos.x - gsPos.x) * t,
+                  gsPos.y + (satPos.y - gsPos.y) * t,
+                  gsPos.z + (satPos.z - gsPos.z) * t,
+                );
+              }, false) as any,
+              point: {
+                pixelSize: 4,
+                color: Color.CYAN,
+                outlineColor: Color.WHITE.withAlpha(0.5),
+                outlineWidth: 1,
+              },
+            });
+            linkEntities.push(gslPacket);
+
+            // Downlink packet (satellite to ground)
+            const gslPacket2 = viewer.entities.add({
+              id: `pkt-gsl2-${gs.id}-${bestSat.sat.id}-${now}`,
+              position: new CallbackProperty(() => {
+                const t = ((Date.now() + 1500) % 3000) / 3000;
+                return new Cartesian3(
+                  satPos.x + (gsPos.x - satPos.x) * t,
+                  satPos.y + (gsPos.y - satPos.y) * t,
+                  satPos.z + (gsPos.z - satPos.z) * t,
+                );
+              }, false) as any,
+              point: {
+                pixelSize: 3,
+                color: Color.CYAN.withAlpha(0.7),
+                outlineWidth: 0,
+              },
+            });
+            linkEntities.push(gslPacket2);
           }
         });
 
