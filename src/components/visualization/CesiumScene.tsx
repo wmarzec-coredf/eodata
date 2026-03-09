@@ -379,7 +379,7 @@ const CesiumScene = ({
         const entityId = picked.id.id as string;
 
         // Skip non-interactive entities
-        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-")) continue;
+        if (entityId.startsWith("orbit-") || entityId.startsWith("isl-") || entityId.startsWith("gsl-") || entityId.startsWith("link-") || entityId.startsWith("pkt-")) continue;
 
         // Ground station click
         const gs = groundStationsList.find((s) => s.id === entityId);
@@ -652,6 +652,48 @@ const CesiumScene = ({
             },
           });
           linkEntities.push(entity);
+
+          // Data packet traveling along the ISL
+          const islPacketA = a.position.clone();
+          const islPacketB = b.position.clone();
+          const packetEntity = viewer.entities.add({
+            id: `pkt-isl-${a.sat.id}-${b.sat.id}-${now}`,
+            position: new CallbackProperty(() => {
+              const t = (Date.now() % 2000) / 2000; // 2-second cycle
+              return new Cartesian3(
+                islPacketA.x + (islPacketB.x - islPacketA.x) * t,
+                islPacketA.y + (islPacketB.y - islPacketA.y) * t,
+                islPacketA.z + (islPacketB.z - islPacketA.z) * t,
+              );
+            }, false) as any,
+            point: {
+              pixelSize: 5,
+              color: Color.fromCssColorString("#ff88ff"),
+              outlineColor: Color.fromCssColorString("#ff44ff"),
+              outlineWidth: 2,
+            },
+          });
+          linkEntities.push(packetEntity);
+
+          // Second packet going the other direction (offset by half cycle)
+          const packetEntity2 = viewer.entities.add({
+            id: `pkt-isl2-${a.sat.id}-${b.sat.id}-${now}`,
+            position: new CallbackProperty(() => {
+              const t = ((Date.now() + 1000) % 2000) / 2000;
+              return new Cartesian3(
+                islPacketB.x + (islPacketA.x - islPacketB.x) * t,
+                islPacketB.y + (islPacketA.y - islPacketB.y) * t,
+                islPacketB.z + (islPacketA.z - islPacketB.z) * t,
+              );
+            }, false) as any,
+            point: {
+              pixelSize: 4,
+              color: Color.fromCssColorString("#ff88ff").withAlpha(0.7),
+              outlineColor: Color.fromCssColorString("#ff44ff").withAlpha(0.5),
+              outlineWidth: 1,
+            },
+          });
+          linkEntities.push(packetEntity2);
         });
       }
 
@@ -718,6 +760,47 @@ const CesiumScene = ({
               },
             });
             linkEntities.push(entity);
+
+            // Data packet traveling from ground station up to satellite
+            const gsPos = gsPosition.clone();
+            const satPos = bestSat.position.clone();
+            const gslPacket = viewer.entities.add({
+              id: `pkt-gsl-${gs.id}-${bestSat.sat.id}-${now}`,
+              position: new CallbackProperty(() => {
+                const t = (Date.now() % 3000) / 3000; // 3-second cycle
+                return new Cartesian3(
+                  gsPos.x + (satPos.x - gsPos.x) * t,
+                  gsPos.y + (satPos.y - gsPos.y) * t,
+                  gsPos.z + (satPos.z - gsPos.z) * t,
+                );
+              }, false) as any,
+              point: {
+                pixelSize: 4,
+                color: Color.CYAN,
+                outlineColor: Color.WHITE.withAlpha(0.5),
+                outlineWidth: 1,
+              },
+            });
+            linkEntities.push(gslPacket);
+
+            // Downlink packet (satellite to ground)
+            const gslPacket2 = viewer.entities.add({
+              id: `pkt-gsl2-${gs.id}-${bestSat.sat.id}-${now}`,
+              position: new CallbackProperty(() => {
+                const t = ((Date.now() + 1500) % 3000) / 3000;
+                return new Cartesian3(
+                  satPos.x + (gsPos.x - satPos.x) * t,
+                  satPos.y + (gsPos.y - satPos.y) * t,
+                  satPos.z + (gsPos.z - satPos.z) * t,
+                );
+              }, false) as any,
+              point: {
+                pixelSize: 3,
+                color: Color.CYAN.withAlpha(0.7),
+                outlineWidth: 0,
+              },
+            });
+            linkEntities.push(gslPacket2);
           }
         });
 
